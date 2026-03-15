@@ -1,0 +1,31 @@
+package com.spam.financialaccounting.presentation.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.spam.financialaccounting.application.usecases.CreateFAGroup;
+import com.spam.financialaccounting.domain.entity.FAGroup;
+import com.spam.financialaccounting.infrastructure.persistence.mapper.FAGroupDTOMapper;
+import com.spam.financialaccounting.presentation.dto.FAGroupDTO;
+
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+
+@RestController
+public class FAGroupController {
+    private final CreateFAGroup createUseCase;
+
+    public FAGroupController(CreateFAGroup createUseCase) {
+        this.createUseCase = createUseCase;
+    }
+
+    @PostMapping
+    public void create(@RequestBody FAGroupDTO dto) {
+        FAGroup entity = FAGroupDTOMapper.toEntity(dto);
+        createUseCase.execute(entity);
+    }
+}
