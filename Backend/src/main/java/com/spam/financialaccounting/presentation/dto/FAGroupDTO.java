@@ -8,6 +8,9 @@ public class FAGroupDTO {
     private String accountType;  // Type (e.g., '0' for Asset, '1' for Liability)
     private BigDecimal accountCurrentBalance;  // Current balance (for aggregations)
 
+    public FAGroupDTO() {
+    }
+
     //Constructor
     public FAGroupDTO(String accountCode, String accountDescription, String accountType, BigDecimal accountCurrentBalance) {
         this.accountCode = accountCode;

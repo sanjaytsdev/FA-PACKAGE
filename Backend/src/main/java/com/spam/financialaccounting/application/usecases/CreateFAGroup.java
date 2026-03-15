@@ -1,8 +1,11 @@
 package com.spam.financialaccounting.application.usecases;
 
+import org.springframework.stereotype.Service;
+
 import com.spam.financialaccounting.domain.entity.FAGroup;
 import com.spam.financialaccounting.domain.repository.FAGroupRepository;
 
+@Service
 public class CreateFAGroup {
     private FAGroupRepository faGroupRepository;
 
