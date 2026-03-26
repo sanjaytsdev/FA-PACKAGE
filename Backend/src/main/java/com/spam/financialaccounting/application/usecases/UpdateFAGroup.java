@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import com.spam.financialaccounting.domain.entity.FAGroup;
 import com.spam.financialaccounting.domain.repository.FAGroupRepository;
+import com.spam.financialaccounting.presentation.exception.FAGroupNotFoundException;
 
 @Service
 public class UpdateFAGroup {
@@ -16,12 +17,14 @@ public class UpdateFAGroup {
 
     public FAGroup execute(FAGroup faGroup) {
         // 1. Check if the group exists
-        FAGroup existingGroup = repository.findByCode(faGroup.getAccountCode());
-        if (existingGroup == null) {
-            throw new IllegalArgumentException("Account Group with code " + faGroup.getAccountCode() + " not found.");
-        }
-        repository.update(faGroup);
+        repository.findByCode(faGroup.getAccountCode())
+            .orElseThrow(() ->
+                    new FAGroupNotFoundException(
+                            "Account Group with code " + faGroup.getAccountCode() + " not found."
+                    )
+            );
+        FAGroup updatedGroup = repository.update(faGroup);
 
-        return faGroup;
+        return updatedGroup;
     }
 }
