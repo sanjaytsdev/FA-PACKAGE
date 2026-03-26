@@ -1,17 +1,18 @@
 package com.spam.financialaccounting.domain.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 
 public interface FASubGroupRepository {
-    void save(FASubGroup subGroup);
+    FASubGroup save(FASubGroup subGroup);
 
-    FASubGroup findByCode(String sCode);
+    Optional<FASubGroup> findByCode(String sCode);
 
     List<FASubGroup> findAll();
 
-    void update(FASubGroup subGroup);
+    FASubGroup update(FASubGroup subGroup);
 
-    void delete(String sCode);
+    boolean delete(String sCode);
 }

@@ -29,7 +29,6 @@ public class FASubGroupController {
         FASubGroup entity=FASubGroupDTOMapper.toEntity(dto);
         FASubGroup created = createUseCase.execute(entity);
         return ResponseEntity.status(HttpStatus.CREATED).body(FASubGroupDTOMapper.toDTO(created));
-        
     }
     
 }

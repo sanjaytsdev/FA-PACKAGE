@@ -1,5 +1,6 @@
 package com.spam.financialaccounting.presentation.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,7 +18,7 @@ import com.spam.financialaccounting.presentation.dto.FAGroupDTO;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/v1/fa-groups")
+@RequestMapping("/api/v1/fagroups")
 public class FAGroupController {
     private final CreateFAGroup createUseCase;
     private final UpdateFAGroup updateUseCase;
@@ -28,9 +29,10 @@ public class FAGroupController {
     }
 
     @PostMapping
-    public void create(@RequestBody FAGroupDTO dto) {
+    public ResponseEntity<FAGroupDTO> create(@RequestBody FAGroupDTO dto) {
         FAGroup entity = FAGroupDTOMapper.toEntity(dto);
-        createUseCase.execute(entity);
+        FAGroup created = createUseCase.execute(entity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(FAGroupDTOMapper.toDTO(created));
     }
 
     @PutMapping("/{code}")
