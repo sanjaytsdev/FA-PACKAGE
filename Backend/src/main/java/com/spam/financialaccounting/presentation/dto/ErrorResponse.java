@@ -1,13 +1,13 @@
 package com.spam.financialaccounting.presentation.dto;
 
-public class ErrorReponse {
+public class ErrorResponse {
     private String timestamp;
     private int status;
     private String error;
     private String message;
     private String path;
 
-    public ErrorReponse(String timestamp, int status, String error, String message, String path) {
+    public ErrorRepsonse(String timestamp, int status, String error, String message, String path) {
         this.timestamp = timestamp;
         this.status = status;
         this.error = error;
