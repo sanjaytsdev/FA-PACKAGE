@@ -1,6 +1,7 @@
 package com.spam.financialaccounting.infrastructure.persistence.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -22,7 +23,7 @@ class FASubGroupRepositoryJDBC implements FASubGroupRepository {
     }
 
     @Override
-    public void save(FASubGroup subGroup) {
+    public FASubGroup save(FASubGroup subGroup) {
         String sql = "INSERT INTO FASubGroup(S_CODE,S_DESC,A_CODE,S_TYPE,S_OPBAL,S_DRCR,S_FLAG) VALUES(?,?,?,?,?,?,?)";
         jdbcTemplate.update(sql,
                 subGroup.getSCode(),
@@ -32,13 +33,14 @@ class FASubGroupRepositoryJDBC implements FASubGroupRepository {
                 subGroup.getSOpbal(),
                 subGroup.getSDrCr(),
                 subGroup.getSFlag());
+        return subGroup;
     }
 
     @Override
-    public FASubGroup findByCode(String sCode) {
+    public Optional<FASubGroup> findByCode(String sCode) {
         String sql = "SELECT * FROM FASubGroup WHERE S_CODE = ?";
         List<FASubGroup> result = jdbcTemplate.query(sql, rowMapper, sCode);
-        return result.isEmpty() ? null : result.get(0);
+        return result.stream().findFirst();
     }
 
     @Override
@@ -48,7 +50,7 @@ class FASubGroupRepositoryJDBC implements FASubGroupRepository {
     }
 
     @Override
-    public void update(FASubGroup subGroup) {
+    public FASubGroup update(FASubGroup subGroup) {
         String sql = "UPDATE FASubGroup SET S_DESC=?, A_CODE=?, S_TYPE=?, S_OPBAL=?, S_DRCR=?, S_FLAG=? WHERE S_CODE=?";
         jdbcTemplate.update(sql,
                 subGroup.getSDesc(),
@@ -58,12 +60,14 @@ class FASubGroupRepositoryJDBC implements FASubGroupRepository {
                 subGroup.getSDrCr(),
                 subGroup.getSFlag(),
                 subGroup.getSCode());
+        return subGroup;
     }
 
     @Override
-    public void delete(String sCode) {
+    public boolean delete(String sCode) {
         String sql = "DELETE FROM FASubGroup WHERE S_CODE = ?";
-        jdbcTemplate.update(sql, sCode);
+        int rowsAffected = jdbcTemplate.update(sql, sCode);
+        return rowsAffected > 0;
     }
 
 }
