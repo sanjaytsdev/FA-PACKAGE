@@ -35,9 +35,10 @@ public class FAGroupController {
     }
 
     @PostMapping
-    public void create(@RequestBody FAGroupDTO dto) {
+    public ResponseEntity<String> create(@Valid @RequestBody FAGroupDTO dto) {
         FAGroup entity = FAGroupDTOMapper.toEntity(dto);
         createUseCase.execute(entity);
+        return ResponseEntity.status(201).body("FA Group created successfully");
     }
 
     @PutMapping("/{code}")
