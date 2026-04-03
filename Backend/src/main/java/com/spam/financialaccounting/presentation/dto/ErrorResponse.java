@@ -7,7 +7,7 @@ public class ErrorResponse {
     private String message;
     private String path;
 
-    public ErrorRepsonse(String timestamp, int status, String error, String message, String path) {
+    public ErrorResponse(String timestamp, int status, String error, String message, String path) {
         this.timestamp = timestamp;
         this.status = status;
         this.error = error;
@@ -34,6 +34,5 @@ public class ErrorResponse {
     public String getPath() {
         return path;
     }
-    
-    
+
 }
