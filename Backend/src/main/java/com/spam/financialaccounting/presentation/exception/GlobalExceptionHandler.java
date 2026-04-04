@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.spam.financialaccounting.presentation.dto.ErrorResponse;
@@ -74,5 +75,20 @@ public class GlobalExceptionHandler {
                 buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occurred", request),
                 HttpStatus.INTERNAL_SERVER_ERROR
         );
-    }
+    }    
+
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        public ResponseEntity<ErrorResponse> handleValidationExceptions(
+                MethodArgumentNotValidException ex,
+                HttpServletRequest request) {
+
+                        String errorMessage = ex.getBindingResult()
+                        .getFieldErrors()
+                        .stream()
+                        .map(err -> err.getField() + ": " +err.getDefaultMessage())
+                        .findFirst()
+                        .orElse("Validation error");
+                
+                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, errorMessage, request), HttpStatus.BAD_REQUEST);
+        }
 }

@@ -36,7 +36,7 @@ public class FAGroupController {
     }
 
     @PostMapping
-    public ResponseEntity<FAGroupDTO> create(@RequestBody FAGroupDTO dto) {
+    public ResponseEntity<FAGroupDTO> create(@Valid @RequestBody FAGroupDTO dto) {
         FAGroup entity = FAGroupDTOMapper.toEntity(dto);
         FAGroup created = createUseCase.execute(entity);
         return ResponseEntity.status(HttpStatus.CREATED).body(FAGroupDTOMapper.toDTO(created));
