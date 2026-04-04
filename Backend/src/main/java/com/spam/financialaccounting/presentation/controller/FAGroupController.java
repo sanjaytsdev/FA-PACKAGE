@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import com.spam.financialaccounting.application.usecases.CreateFAGroup;
 import com.spam.financialaccounting.application.usecases.UpdateFAGroup;
 import com.spam.financialaccounting.application.usecases.GetAllFAGroup;
+import com.spam.financialaccounting.application.usecases.GetFAGroupByCode;
 import com.spam.financialaccounting.domain.entity.FAGroup;
 import com.spam.financialaccounting.infrastructure.persistence.mapper.FAGroupDTOMapper;
 import com.spam.financialaccounting.presentation.dto.FAGroupDTO;
@@ -28,11 +29,20 @@ public class FAGroupController {
     private final CreateFAGroup createUseCase;
     private final UpdateFAGroup updateUseCase;
     private final GetAllFAGroup getAllUseCase;
+    private final GetFAGroupByCode getByCodeUseCase;
 
-    public FAGroupController(CreateFAGroup createUseCase, UpdateFAGroup updateUseCase, GetAllFAGroup getAllUseCase) {
+    public FAGroupController(CreateFAGroup createUseCase, UpdateFAGroup updateUseCase, GetAllFAGroup getAllUseCase,
+            GetFAGroupByCode getByCodeUseCase) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.getAllUseCase = getAllUseCase;
+        this.getByCodeUseCase = getByCodeUseCase;
+    }
+
+    @GetMapping("/{code}")
+    public ResponseEntity<FAGroupDTO> getByCode(@PathVariable String code) {
+        FAGroup group= getByCodeUseCase.execute(code);
+        return ResponseEntity.ok(FAGroupDTOMapper.toDTO(group));
     }
 
     @PostMapping
@@ -44,9 +54,9 @@ public class FAGroupController {
 
     @PutMapping("/{code}")
     public ResponseEntity<FAGroupDTO> update(@PathVariable String code, @Valid @RequestBody FAGroupDTO dto) {
-        FAGroup entity=FAGroupDTOMapper.toEntity(dto);
+        FAGroup entity = FAGroupDTOMapper.toEntity(dto);
         entity.setAccountCode(code);
-        FAGroup updatedEntity =updateUseCase.execute(entity);
+        FAGroup updatedEntity = updateUseCase.execute(entity);
         return ResponseEntity.ok(FAGroupDTOMapper.toDTO(updatedEntity));
     }
 
@@ -55,7 +65,7 @@ public class FAGroupController {
         List<FAGroup> entities = getAllUseCase.execute();
         List<FAGroupDTO> dtos = new ArrayList<>();
 
-        for(FAGroup entity : entities){
+        for (FAGroup entity : entities) {
             FAGroupDTO dto = FAGroupDTOMapper.toDTO(entity);
             dtos.add(dto);
         }
