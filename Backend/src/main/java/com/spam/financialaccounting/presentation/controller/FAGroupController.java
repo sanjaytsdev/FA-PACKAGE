@@ -16,9 +16,11 @@ import java.util.ArrayList;
 import com.spam.financialaccounting.application.usecases.CreateFAGroup;
 import com.spam.financialaccounting.application.usecases.UpdateFAGroup;
 import com.spam.financialaccounting.application.usecases.GetAllFAGroup;
+import com.spam.financialaccounting.application.usecases.GetFAGroupWithSubGroups;
 import com.spam.financialaccounting.domain.entity.FAGroup;
 import com.spam.financialaccounting.infrastructure.persistence.mapper.FAGroupDTOMapper;
 import com.spam.financialaccounting.presentation.dto.FAGroupDTO;
+import com.spam.financialaccounting.presentation.dto.FAGroupWithSubGroupsDTO;
 
 import jakarta.validation.Valid;
 
@@ -28,11 +30,15 @@ public class FAGroupController {
     private final CreateFAGroup createUseCase;
     private final UpdateFAGroup updateUseCase;
     private final GetAllFAGroup getAllUseCase;
+    private final GetFAGroupWithSubGroups getFAGroupWithSubGroups;
 
-    public FAGroupController(CreateFAGroup createUseCase, UpdateFAGroup updateUseCase, GetAllFAGroup getAllUseCase) {
+
+    public FAGroupController(CreateFAGroup createUseCase, UpdateFAGroup updateUseCase, GetAllFAGroup getAllUseCase,
+            GetFAGroupWithSubGroups getFAGroupWithSubGroups) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.getAllUseCase = getAllUseCase;
+        this.getFAGroupWithSubGroups=getFAGroupWithSubGroups;
     }
 
     @PostMapping
@@ -60,6 +66,12 @@ public class FAGroupController {
             dtos.add(dto);
         }
         return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/{code}/subgroups")
+    public ResponseEntity<FAGroupWithSubGroupsDTO> getGroupWithSubGroups(@PathVariable String code) {
+        FAGroupWithSubGroupsDTO result= getFAGroupWithSubGroups.execute(code);
+        return ResponseEntity.ok(result);
     }
 
 }
