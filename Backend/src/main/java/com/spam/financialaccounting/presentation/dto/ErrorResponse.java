@@ -34,6 +34,5 @@ public class ErrorResponse {
     public String getPath() {
         return path;
     }
-    
-    
+
 }

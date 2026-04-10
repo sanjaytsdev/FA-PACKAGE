@@ -11,6 +11,7 @@ public interface FASubGroupRepository {
     Optional<FASubGroup> findByCode(String sCode);
 
     List<FASubGroup> findAll();
+    List<FASubGroup> findByACode(String aCode);
 
     FASubGroup update(FASubGroup subGroup);
 
