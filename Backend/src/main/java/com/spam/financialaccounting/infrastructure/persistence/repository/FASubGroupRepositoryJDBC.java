@@ -18,8 +18,8 @@ class FASubGroupRepositoryJDBC implements FASubGroupRepository {
     private final RowMapper<FASubGroup> rowMapper;
 
     public FASubGroupRepositoryJDBC(JdbcTemplate jdbcTemplate, FASubGroupRowMapper rowMapper) {
-        this.jdbcTemplate=jdbcTemplate;
-        this.rowMapper=rowMapper;
+        this.jdbcTemplate = jdbcTemplate;
+        this.rowMapper = rowMapper;
     }
 
     @Override
@@ -47,6 +47,12 @@ class FASubGroupRepositoryJDBC implements FASubGroupRepository {
     public List<FASubGroup> findAll() {
         String sql = "SELECT * FROM FASubGroup";
         return jdbcTemplate.query(sql, rowMapper);
+    }
+
+    @Override
+    public List<FASubGroup> findByACode(String aCode) {
+        String sql = "SELECT * FROM FASubGroup WHERE A_CODE=?";
+        return jdbcTemplate.query(sql, rowMapper, aCode);
     }
 
     @Override
