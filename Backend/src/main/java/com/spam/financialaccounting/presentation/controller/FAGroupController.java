@@ -24,37 +24,35 @@ import com.spam.financialaccounting.presentation.dto.FAGroupDTO;
 import com.spam.financialaccounting.presentation.dto.FAGroupWithSubGroupsDTO;
 
 import jakarta.validation.Valid;
-
 @RestController
 @RequestMapping("/api/v1/fagroups")
 public class FAGroupController {
+
     private final CreateFAGroup createUseCase;
     private final UpdateFAGroup updateUseCase;
     private final GetAllFAGroup getAllUseCase;
     private final GetFAGroupByCode getByCodeUseCase;
+    private final GetFAGroupWithSubGroups getFAGroupWithSubGroups;
 
-    public FAGroupController(CreateFAGroup createUseCase, UpdateFAGroup updateUseCase, GetAllFAGroup getAllUseCase,
-            GetFAGroupByCode getByCodeUseCase) {
+    // Single Constructor with all dependencies
+    public FAGroupController(CreateFAGroup createUseCase, 
+                             UpdateFAGroup updateUseCase, 
+                             GetAllFAGroup getAllUseCase,
+                             GetFAGroupByCode getByCodeUseCase, 
+                             GetFAGroupWithSubGroups getFAGroupWithSubGroups) {
         this.createUseCase = createUseCase;
         this.updateUseCase = updateUseCase;
         this.getAllUseCase = getAllUseCase;
         this.getByCodeUseCase = getByCodeUseCase;
+        this.getFAGroupWithSubGroups = getFAGroupWithSubGroups;
     }
 
     @GetMapping("/{code}")
     public ResponseEntity<FAGroupDTO> getByCode(@PathVariable String code) {
         FAGroup group= getByCodeUseCase.execute(code);
         return ResponseEntity.ok(FAGroupDTOMapper.toDTO(group));
-    private final GetFAGroupWithSubGroups getFAGroupWithSubGroups;
-
-
-    public FAGroupController(CreateFAGroup createUseCase, UpdateFAGroup updateUseCase, GetAllFAGroup getAllUseCase,
-            GetFAGroupWithSubGroups getFAGroupWithSubGroups) {
-        this.createUseCase = createUseCase;
-        this.updateUseCase = updateUseCase;
-        this.getAllUseCase = getAllUseCase;
-        this.getFAGroupWithSubGroups=getFAGroupWithSubGroups;
     }
+
 
     @PostMapping
     public ResponseEntity<FAGroupDTO> create(@Valid @RequestBody FAGroupDTO dto) {
@@ -85,7 +83,7 @@ public class FAGroupController {
 
     @GetMapping("/{code}/subgroups")
     public ResponseEntity<FAGroupWithSubGroupsDTO> getGroupWithSubGroups(@PathVariable String code) {
-        FAGroupWithSubGroupsDTO result= getFAGroupWithSubGroups.execute(code);
+        FAGroupWithSubGroupsDTO result = getFAGroupWithSubGroups.execute(code);
         return ResponseEntity.ok(result);
     }
 
