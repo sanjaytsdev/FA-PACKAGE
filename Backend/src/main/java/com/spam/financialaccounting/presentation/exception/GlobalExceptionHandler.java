@@ -12,83 +12,107 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    private ErrorResponse buildResponse(HttpStatus status, String message, HttpServletRequest request) {
-        return new ErrorResponse(
-                LocalDateTime.now().toString(),
-                status.value(),
-                status.getReasonPhrase(),
-                message,
-                request.getRequestURI()
-        );
-    }
 
-    @ExceptionHandler(FAGroupNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(
-            FAGroupNotFoundException ex,
-            HttpServletRequest request) {
+        private ErrorResponse buildResponse(HttpStatus status, String message, HttpServletRequest request) {
+                return new ErrorResponse(
+                                LocalDateTime.now().toString(),
+                                status.value(),
+                                status.getReasonPhrase(),
+                                message,
+                                request.getRequestURI());
+        }
 
-        return new ResponseEntity<>(
-                buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request),
-                HttpStatus.NOT_FOUND
-        );
-    }
+        @ExceptionHandler(FAGroupNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleNotFound(
+                        FAGroupNotFoundException ex,
+                        HttpServletRequest request) {
 
-    @ExceptionHandler(FAGroupValidationException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(
-            FAGroupValidationException ex,
-            HttpServletRequest request) {
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request),
+                                HttpStatus.NOT_FOUND);
+        }
 
-        return new ResponseEntity<>(
-                buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
-                HttpStatus.BAD_REQUEST
-        );
-    }
+        @ExceptionHandler(FAGroupValidationException.class)
+        public ResponseEntity<ErrorResponse> handleValidation(
+                        FAGroupValidationException ex,
+                        HttpServletRequest request) {
 
-    @ExceptionHandler(FAGroupAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(
-            FAGroupAlreadyExistsException ex,
-            HttpServletRequest request) {
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
 
-        return new ResponseEntity<>(
-                buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
-                HttpStatus.CONFLICT
-        );
-    }
+        @ExceptionHandler(FAGroupAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleConflict(
+                        FAGroupAlreadyExistsException ex,
+                        HttpServletRequest request) {
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(
-            IllegalArgumentException ex,
-            HttpServletRequest request) {
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
 
-        return new ResponseEntity<>(
-                buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
-                HttpStatus.BAD_REQUEST
-        );
-    }
+        // ---FASubGroup Handlers---
+        @ExceptionHandler(FASubGroupNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleSubGroupNotFound(
+                        FASubGroupNotFoundException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request),
+                                HttpStatus.NOT_FOUND);
+        }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneric(
-            Exception ex,
-            HttpServletRequest request) {
+        @ExceptionHandler(FASubGroupValidationException.class)
+        public ResponseEntity<ErrorResponse> handleSubGroupValidation(
+                        FASubGroupValidationException ex,
+                        HttpServletRequest request) {
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
 
-        return new ResponseEntity<>(
-                buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occurred", request),
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
-    }    
+        @ExceptionHandler(FASubGroupAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleSubGroupConflict(
+                        FASubGroupAlreadyExistsException ex,
+                        HttpServletRequest request) {
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
+
+        // --- Generic Handlers ---
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<ErrorResponse> handleIllegalArgument(
+                        IllegalArgumentException ex,
+                        HttpServletRequest request) {
+
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
+
+
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ErrorResponse> handleGeneric(
+                        Exception ex,
+                        HttpServletRequest request) {
+
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occurred", request),
+                                HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
         @ExceptionHandler(MethodArgumentNotValidException.class)
         public ResponseEntity<ErrorResponse> handleValidationExceptions(
-                MethodArgumentNotValidException ex,
-                HttpServletRequest request) {
+                        MethodArgumentNotValidException ex,
+                        HttpServletRequest request) {
 
-                        String errorMessage = ex.getBindingResult()
-                        .getFieldErrors()
-                        .stream()
-                        .map(err -> err.getField() + ": " +err.getDefaultMessage())
-                        .findFirst()
-                        .orElse("Validation error");
-                
-                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, errorMessage, request), HttpStatus.BAD_REQUEST);
+                String errorMessage = ex.getBindingResult()
+                                .getFieldErrors()
+                                .stream()
+                                .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                                .findFirst()
+                                .orElse("Validation error");
+
+                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, errorMessage, request),
+                                HttpStatus.BAD_REQUEST);
         }
 }
