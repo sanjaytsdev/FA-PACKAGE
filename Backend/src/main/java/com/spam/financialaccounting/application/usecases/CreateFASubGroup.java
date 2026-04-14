@@ -8,6 +8,7 @@ import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.domain.repository.FAGroupRepository;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
 import com.spam.financialaccounting.presentation.exception.FAGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.FASubGroupAlreadyExistsException;
 
 @Service
 public class CreateFASubGroup {
@@ -21,9 +22,9 @@ public class CreateFASubGroup {
     }
 
     public FASubGroup execute(FASubGroup subGroup) {
-        groupRepository.findByCode(subGroup.getACode()).orElseThrow(() ->
-                new FAGroupNotFoundException("Parent Group with code " + subGroup.getACode() + " does not exist.")
-            );
+
+        groupRepository.findByCode(subGroup.getACode()).orElseThrow(() -> new FAGroupNotFoundException(
+                "Parent Group with code " + subGroup.getACode() + " does not exist."));
 
         if (subGroup.getSOpbal() == null) {
             subGroup.setSOpbal(BigDecimal.ZERO);
@@ -31,6 +32,11 @@ public class CreateFASubGroup {
 
         if (subGroup.getSFlag() == null) {
             subGroup.setSFlag("T");
+        }
+
+        if (subGroupRepository.existsByCode(subGroup.getSCode())) {
+            throw new FASubGroupAlreadyExistsException(
+                    "Ledger Account already exist with code: " + subGroup.getSCode());
         }
 
         subGroupRepository.save(subGroup);
