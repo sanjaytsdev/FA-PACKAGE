@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.domain.repository.FAGroupRepository;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
-import com.spam.financialaccounting.presentation.exception.FAGroupNotFoundException;
-import com.spam.financialaccounting.presentation.exception.FASubGroupAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupAlreadyExistsException;
 
 @Service
 public class CreateFASubGroup {
