@@ -8,6 +8,16 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.spam.financialaccounting.presentation.dto.ErrorResponse;
+import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupValidationException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupValidationException;
+import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailNotFoundException;
+import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestControllerAdvice
@@ -22,6 +32,7 @@ public class GlobalExceptionHandler {
                                 request.getRequestURI());
         }
 
+        // ---FAGroup Handlers---
         @ExceptionHandler(FAGroupNotFoundException.class)
         public ResponseEntity<ErrorResponse> handleNotFound(
                         FAGroupNotFoundException ex,
@@ -78,6 +89,30 @@ public class GlobalExceptionHandler {
                                 HttpStatus.CONFLICT);
         }
 
+        // ----JournalDetail Handler---
+        @ExceptionHandler(JournalDetailNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleJournalDetailNotFound(
+                        JournalDetailNotFoundException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request),
+                                HttpStatus.NOT_FOUND);
+        }
+
+
+        @ExceptionHandler(JournalDetailAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleJournalAlreadyExist(
+                        JournalDetailAlreadyExistsException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
+
+        @ExceptionHandler(JournalDetailValidationException.class)
+        public ResponseEntity<ErrorResponse> handleJournalValidation(
+                        JournalDetailValidationException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
+
+
         // --- Generic Handlers ---
         @ExceptionHandler(IllegalArgumentException.class)
         public ResponseEntity<ErrorResponse> handleIllegalArgument(
@@ -88,7 +123,6 @@ public class GlobalExceptionHandler {
                                 buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
                                 HttpStatus.BAD_REQUEST);
         }
-
 
         @ExceptionHandler(Exception.class)
         public ResponseEntity<ErrorResponse> handleGeneric(

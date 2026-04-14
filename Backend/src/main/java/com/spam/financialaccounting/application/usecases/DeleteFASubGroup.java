@@ -4,8 +4,8 @@ import org.springframework.stereotype.Service;
 
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
-import com.spam.financialaccounting.presentation.exception.FASubGroupNotFoundException;
-import com.spam.financialaccounting.presentation.exception.FASubGroupValidationException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupValidationException;
 
 @Service
 public class DeleteFASubGroup {

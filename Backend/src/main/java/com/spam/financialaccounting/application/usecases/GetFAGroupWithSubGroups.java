@@ -13,7 +13,7 @@ import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
 import com.spam.financialaccounting.infrastructure.persistence.mapper.FASubGroupDTOMapper;
 import com.spam.financialaccounting.presentation.dto.FAGroupWithSubGroupsDTO;
 import com.spam.financialaccounting.presentation.dto.FASubGroupDTO;
-import com.spam.financialaccounting.presentation.exception.FAGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupNotFoundException;
 
 @Service
 public class GetFAGroupWithSubGroups {

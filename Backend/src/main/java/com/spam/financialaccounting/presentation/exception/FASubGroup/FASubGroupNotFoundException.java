@@ -1,4 +1,4 @@
-package com.spam.financialaccounting.presentation.exception;
+package com.spam.financialaccounting.presentation.exception.fasubgroup;
 
 public class FASubGroupNotFoundException extends FASubGroupException {
     public FASubGroupNotFoundException(String message) {

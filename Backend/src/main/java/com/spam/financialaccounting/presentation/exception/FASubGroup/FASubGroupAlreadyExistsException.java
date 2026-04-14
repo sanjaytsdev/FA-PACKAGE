@@ -1,4 +1,4 @@
-package com.spam.financialaccounting.presentation.exception;
+package com.spam.financialaccounting.presentation.exception.fasubgroup;
 
 public class FASubGroupAlreadyExistsException extends FASubGroupException {
     public FASubGroupAlreadyExistsException(String message) {
