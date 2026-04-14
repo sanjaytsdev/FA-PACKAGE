@@ -1,23 +1,43 @@
 
 package com.spam.financialaccounting.presentation.dto;
 
+
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
 import java.math.BigDecimal;
 
 public class FASubGroupDTO {
 
     @NotBlank(message = "Ledger Code is mandatory")
+    @Size(min = 5,max = 5,message = "Ledger Code must be exactly 5 characters" )
     private String sCode;
 
     @NotBlank(message = "Description is mandatory")
+    @Size(max = 50,message = "Description cannot exceed 50 characters")
     private String sDesc;
 
     @NotBlank(message = "Parent Group Code is mandatory")
+    @Size(min = 2, max = 2, message = "Parent Group Code must be exactly 2 characters")
     private String aCode;
 
+    @NotBlank(message = "Type is mandatory")
+    @Size(min = 2, max = 2, message = "Type must be exactly 2 characters")
+    @Pattern(regexp = "^[0-4][0-9]$", message = "Type must be a valid 2-digit account type (00-49)")
     private String sType;
+
+    @DecimalMin(value = "0.0" ,message = "Opening balance must be positive or zero")
+    @Digits(integer = 15,fraction = 3,message = "Amount must have max 15 integer and 3 decimal places")
     private BigDecimal sOpbal;
+
+    @Pattern(regexp = "^(?i)(DR|CR)$",message = "Must be DR or CR")
     private String sDrCr;
+
+    @Pattern(regexp = "^(?i)(T|F)$" ,message = "Must be T (active) or F (inactive)")
     private String sFlag;
 
     // Default Constructor
