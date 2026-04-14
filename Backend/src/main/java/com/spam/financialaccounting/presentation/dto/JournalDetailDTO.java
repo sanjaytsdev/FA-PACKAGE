@@ -4,23 +4,28 @@ import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 
 public class JournalDetailDTO {
 
     @NotBlank(message = "Journal ID is required")
+    @Pattern(regexp = "^.{10}$", message = "Journal ID must be exactly 10 characters")
     private String jId;
 
     @NotBlank(message = "Account code is required")
+    @Pattern(regexp = "^.{5}$", message = "Account code must be exactly 5 characters")
     private String jCode;
 
     @NotBlank(message = "Debit/Credit indicator is required")
+    @Pattern(regexp = "^(DR|CR)$", message = "Debit/Credit indicator must be either 'DR' or 'CR'")
     private String jDrCr;
 
     @NotNull(message = "Amount is required")
-    @Positive(message = "Amount must be positive")
+    @DecimalMin(value = "0.001", message = "Amount must be greater than zero")
     private BigDecimal jAmount;
 
     public JournalDetailDTO() {
