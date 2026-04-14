@@ -16,4 +16,5 @@ public interface FASubGroupRepository {
     FASubGroup update(FASubGroup subGroup);
 
     boolean delete(String sCode);
+    boolean existsByCode(String sCode);
 }

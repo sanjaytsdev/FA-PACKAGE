@@ -76,4 +76,10 @@ class FASubGroupRepositoryJDBC implements FASubGroupRepository {
         return rowsAffected > 0;
     }
 
+    @Override
+    public boolean existsByCode(String sCode) {
+        String sql = "SELECT COUNT(*) FROM FASubGroup WHERE S_CODE=?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, sCode);
+        return count != null && count > 0;
+    }
 }
