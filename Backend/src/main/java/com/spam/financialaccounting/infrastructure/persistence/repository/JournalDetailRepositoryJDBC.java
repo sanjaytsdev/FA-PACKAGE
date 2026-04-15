@@ -5,23 +5,33 @@ import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.dao.DataAccessException;
 
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
 import com.spam.financialaccounting.infrastructure.persistence.mapper.JournalDetailRowMapper;
+import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailNotFoundException;
 
 @Repository
 public class JournalDetailRepositoryJDBC implements JournalDetailRepository {
 
     private final JdbcTemplate jdbcTemplate;
-    private final JournalDetailRowMapper rowMapper = new JournalDetailRowMapper();
+    private final JournalDetailRowMapper rowMapper;
 
-    public JournalDetailRepositoryJDBC(JdbcTemplate jdbcTemplate) {
+    public JournalDetailRepositoryJDBC(JdbcTemplate jdbcTemplate, JournalDetailRowMapper rowMapper) {
         this.jdbcTemplate = jdbcTemplate;
+        this.rowMapper = rowMapper;
     }
 
     @Override
+    @Transactional
     public void save(JournalDetail detail) {
+        if (existsByCompositeKey(detail.getJId(), detail.getJCode(), detail.getJDrCr())) {
+            throw new JournalDetailAlreadyExistsException("JournalDetail already exists");
+        }
         String sql = "INSERT INTO JournalDetail(J_ID,J_CODE,J_DRCR,J_AMOUNT) VALUES(?,?,?,?)";
         jdbcTemplate.update(sql, detail.getJId(), detail.getJCode(), detail.getJDrCr(), detail.getJAmount());
     }
@@ -29,8 +39,11 @@ public class JournalDetailRepositoryJDBC implements JournalDetailRepository {
     @Override
     public Optional<JournalDetail> findByCompositeKey(String jId, String jCode, String jDrCr) {
         String sql = "SELECT * FROM JournalDetail WHERE J_ID=? AND J_CODE=? AND J_DRCR=?";
-        List<JournalDetail> results = jdbcTemplate.query(sql, rowMapper, jId, jCode, jDrCr);
-        return results.stream().findFirst();
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(sql, rowMapper, jId, jCode, jDrCr));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
     }
 
     @Override
@@ -42,7 +55,7 @@ public class JournalDetailRepositoryJDBC implements JournalDetailRepository {
     @Override
     public List<JournalDetail> findByAccountCode(String jCode) {
         String sql = "SELECT * FROM JournalDetail WHERE J_CODE = ?";
-        return jdbcTemplate.query(sql,rowMapper, jCode);
+        return jdbcTemplate.query(sql, rowMapper, jCode);
     }
 
     @Override
@@ -54,7 +67,11 @@ public class JournalDetailRepositoryJDBC implements JournalDetailRepository {
     @Override
     public JournalDetail update(JournalDetail detail) {
         String sql = "UPDATE JournalDetail SET J_AMOUNT=? WHERE J_ID=? AND J_CODE=? AND J_DRCR=?";
-        jdbcTemplate.update(sql, detail.getJAmount(), detail.getJId(), detail.getJCode(), detail.getJDrCr());
+        int rowsAffected = jdbcTemplate.update(sql, detail.getJAmount(), detail.getJId(), detail.getJCode(),
+                detail.getJDrCr());
+        if (rowsAffected == 0) {
+            throw new JournalDetailNotFoundException("No JournalDetail found to update");
+        }
         return detail;
     }
 
@@ -75,8 +92,12 @@ public class JournalDetailRepositoryJDBC implements JournalDetailRepository {
     @Override
     public boolean existsByCompositeKey(String jId, String jCode, String jDrCr) {
         String sql = "SELECT COUNT(*) FROM JournalDetail WHERE J_ID=? AND J_CODE=? AND J_DRCR=?";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, jId, jCode, jDrCr);
-        return count != null && count > 0;
+        try {
+            Integer count = jdbcTemplate.queryForObject(sql, Integer.class, jId, jCode, jDrCr);
+            return count != null && count > 0;
+        } catch (DataAccessException e) {
+            throw new RuntimeException("Database error checking existence", e);
+        }
     }
 
     @Override
