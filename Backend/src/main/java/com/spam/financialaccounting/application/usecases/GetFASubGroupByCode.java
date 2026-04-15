@@ -4,7 +4,8 @@ import org.springframework.stereotype.Service;
 
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
-import com.spam.financialaccounting.presentation.exception.fagroup.FASubGroupNotFoundException; 
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException; 
+
 
 @Service
 public class GetFASubGroupByCode {

@@ -7,9 +7,10 @@ import java.math.BigDecimal;
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.domain.repository.FAGroupRepository;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
-import com.spam.financialaccounting.presentation.exception.fagroup.FASubGroupNotFoundException;
-import com.spam.financialaccounting.presentation.exception.FASubGroup.FASubGroupValidationException;
-import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupValidationException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.
+FASubGroupValidationException;
+import com.spam.financialaccounting.presentation.exception.fagroup.*;
 
 @Service
 public class UpdateFASubGroup {
@@ -32,7 +33,7 @@ public class UpdateFASubGroup {
         // 2. Parent Group Check
         groupRepository.findByCode(subGroup.getACode())
             .orElseThrow(() ->
-                new FAGoupNotFoundException(
+                new FAGroupNotFoundException(
                     "Parent Group with code " + subGroup.getACode() + " does not exist."
                 ));
 
@@ -46,7 +47,7 @@ public class UpdateFASubGroup {
             throw new FAGroupValidationException("Description cannot be null or empty.");
         }
 
-        if(SubGroup.getSDesc().length >50) {
+        if(subGroup.getSDesc().length() >50) {
             throw new FAGroupValidationException("Description cannot exceed 50 characters.");
         }
 
@@ -77,6 +78,8 @@ public class UpdateFASubGroup {
         if (subGroup.getSFlag() == null) {
             subGroup.setSFlag("T");
         }
+
+        return subGroupRepository.update(subGroup);
            
     }
 
