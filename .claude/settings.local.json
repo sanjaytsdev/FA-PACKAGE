@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(for dir:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/amith/OneDrive/Desktop/Projects/FA-PACKAGE/*/$dir/**)",
+      "Bash(done)"
+    ]
+  }
+}
