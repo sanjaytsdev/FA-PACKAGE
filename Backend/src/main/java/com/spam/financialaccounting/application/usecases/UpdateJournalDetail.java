@@ -19,27 +19,22 @@ public class UpdateJournalDetail {
     }
 
     public JournalDetail execute(String jId, String jCode, String jDrCr, BigDecimal newAmount) {
-        //1.validate amount
-        if(newAmount==null || newAmount.compareTo(BigDecimal.ZERO)<=0) {
-             throw new JournalDetailValidationException("Amount must be greater than zero");
+        // 1.validate amount
+        if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new JournalDetailValidationException("Amount must be greater than zero");
         }
 
-        //2.check if details exists
-        JournalDetail existingDetail=journalDetailRepository.findByCompositeKey(jId, jCode, jDrCr)
-        .orElseThrow(()->new JournalDetailNotFoundException(
-                "Journal detail not found for voucher " + jId +
-                ", account " + jCode + ", type " + jDrCr
-            ));
+        // 2.check if details exists
+        JournalDetail existingDetail = journalDetailRepository.findByCompositeKey(jId, jCode, jDrCr)
+                .orElseThrow(() -> new JournalDetailNotFoundException(
+                        "Journal detail not found for voucher " + jId +
+                                ", account " + jCode + ", type " + jDrCr));
 
-        //3. update amount
+        // 3. update amount
         existingDetail.setJAmount(newAmount);
 
-        //4.save update
+        // 4.save update
         return journalDetailRepository.update(existingDetail);
     }
 
-    
-
-    
-    
 }
