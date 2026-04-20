@@ -17,6 +17,8 @@ import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroup
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailAlreadyExistsException;
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailNotFoundException;
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -97,7 +99,6 @@ public class GlobalExceptionHandler {
                                 HttpStatus.NOT_FOUND);
         }
 
-
         @ExceptionHandler(JournalDetailAlreadyExistsException.class)
         public ResponseEntity<ErrorResponse> handleJournalAlreadyExist(
                         JournalDetailAlreadyExistsException ex, HttpServletRequest request) {
@@ -112,6 +113,20 @@ public class GlobalExceptionHandler {
                                 HttpStatus.BAD_REQUEST);
         }
 
+        // ---JournalMaster Handler ---
+        @ExceptionHandler(JournalMasterNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleJournalMasterNotFound(
+                        JournalMasterNotFoundException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(JournalMasterAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> handleJournalMasterAlreadyExistsException(
+                        JournalMasterAlreadyExistsException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
 
         // --- Generic Handlers ---
         @ExceptionHandler(IllegalArgumentException.class)
