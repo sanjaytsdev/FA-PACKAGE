@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
 
@@ -55,61 +56,74 @@ public class FASubGroupDTO {
     }
 
     // --- GETTERS ---
-
+    @JsonProperty("sCode")
     public String getSCode() {
         return sCode;
     }
 
+    @JsonProperty("sDesc")
     public String getSDesc() {
         return sDesc;
     }
 
+    @JsonProperty("aCode")
     public String getACode() {
         return aCode;
     }
 
+    @JsonProperty("sType")
     public String getSType() {
         return sType;
     }
 
+    @JsonProperty("sOpbal")
     public BigDecimal getSOpbal() {
         return sOpbal;
     }
 
+    @JsonProperty("sDrCr")
     public String getSDrCr() {
         return sDrCr;
     }
 
+    @JsonProperty("sFlag")
     public String getSFlag() {
         return sFlag;
     }
 
     // --- SETTERS ---
 
+    @JsonProperty("sCode")
     public void setSCode(String sCode) {
         this.sCode = sCode;
     }
 
+    @JsonProperty("sDesc")  
     public void setSDesc(String sDesc) {
         this.sDesc = sDesc;
     }
 
+    @JsonProperty("aCode")
     public void setACode(String aCode) {
         this.aCode = aCode;
     }
 
+    @JsonProperty("sType")
     public void setSType(String sType) {
         this.sType = sType;
     }
 
+    @JsonProperty("sOpbal")
     public void setSOpbal(BigDecimal sOpbal) {
         this.sOpbal = sOpbal;
     }
 
+    @JsonProperty("sDrCr")
     public void setSDrCr(String sDrCr) {
         this.sDrCr = sDrCr;
     }
 
+    @JsonProperty("sFlag")
     public void setSFlag(String sFlag) {
         this.sFlag = sFlag;
     }
