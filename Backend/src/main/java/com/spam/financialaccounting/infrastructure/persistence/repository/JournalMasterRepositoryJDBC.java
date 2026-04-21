@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.spam.financialaccounting.domain.entity.JournalMaster;
 import com.spam.financialaccounting.domain.repository.JournalMasterRepository;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
 
 @Repository
 public class JournalMasterRepositoryJDBC implements JournalMasterRepository {
@@ -27,8 +29,7 @@ public class JournalMasterRepositoryJDBC implements JournalMasterRepository {
     @Transactional
     public JournalMaster save(JournalMaster journalMaster) {
         if(existsById(journalMaster.getJId())) {
-            throw new JournalMasterAlreadyExistsException("JournalMaster with  
-  ID " + journalMaster.getJId() + " already exists");
+            throw new JournalMasterAlreadyExistsException("JournalMaster with ID " + journalMaster.getJId() + " already exists");
         }
         String sql = "INSERT INTO JournalMaster(J_ID,J_DOC,J_DATE,J_AMOUNT,J_NARR) VALUES (?,?,?,?,?)";
         jdbcTemplate.update(sql, journalMaster.getJId(),journalMaster.getJDoc(),journalMaster.getJDate(),journalMaster.getJAmount(),journalMaster.getJNarr());
@@ -63,8 +64,7 @@ public class JournalMasterRepositoryJDBC implements JournalMasterRepository {
                 journalMaster.getJId());
 
         if (rowsAffected == 0) {
-            throw new JournalMasterNotFoundException("JournalMaster with ID " +
-                    journalMaster.getJId() + " not found");
+            throw new JournalMasterNotFoundException("JournalMaster with ID " + journalMaster.getJId() + " not found");
         }
 
         return journalMaster;
@@ -81,8 +81,8 @@ public class JournalMasterRepositoryJDBC implements JournalMasterRepository {
     @Override
     public boolean existsById(String jId) {
         String sql = "SELECT COUNT(*) FROM JournalMaster WHERE J_ID = ?";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, jId);
-        return count != null && count > 0;
+        Integer count = jdbcTemplate.queryForObject(sql,Integer.class,jId);
+        return count!=null && count>0;
     }
 
 }
