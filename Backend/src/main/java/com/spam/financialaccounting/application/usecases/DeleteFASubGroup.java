@@ -33,7 +33,6 @@ public class DeleteFASubGroup {
     }
 
     private boolean hasJournalEntries(String sCode) {
-        // Implement this check based on your JournalDetailRepository
-        return false;
+        return journalDetailRepository.existsByAccountCode(sCode);
     }
 }
