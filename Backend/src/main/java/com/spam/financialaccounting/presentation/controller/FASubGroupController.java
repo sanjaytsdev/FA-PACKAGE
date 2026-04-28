@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.ArrayList;
 
-import com.spam.financialaccounting.application.usecases.CreateFASubGroup;
-import com.spam.financialaccounting.application.usecases.DeleteFASubGroup;
-import com.spam.financialaccounting.application.usecases.GetAllFASubGroup;
-import com.spam.financialaccounting.application.usecases.GetFASubGroupByCode;
-import com.spam.financialaccounting.application.usecases.UpdateFASubGroup;
+import com.spam.financialaccounting.application.usecases.fasubgroup.CreateFASubGroup;
+import com.spam.financialaccounting.application.usecases.fasubgroup.DeleteFASubGroup;
+import com.spam.financialaccounting.application.usecases.fasubgroup.GetAllFASubGroup;
+import com.spam.financialaccounting.application.usecases.fasubgroup.GetFASubGroupByCode;
+import com.spam.financialaccounting.application.usecases.fasubgroup.UpdateFASubGroup;
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.infrastructure.persistence.mapper.FASubGroupDTOMapper;
 import com.spam.financialaccounting.presentation.dto.FASubGroupDTO;

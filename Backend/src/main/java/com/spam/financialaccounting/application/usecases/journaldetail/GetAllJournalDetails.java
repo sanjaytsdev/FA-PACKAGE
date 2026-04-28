@@ -1,4 +1,4 @@
-package com.spam.financialaccounting.application.usecases;
+package com.spam.financialaccounting.application.usecases.journaldetail;
 
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 
