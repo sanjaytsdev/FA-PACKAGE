@@ -19,6 +19,7 @@ import com.spam.financialaccounting.presentation.exception.journaldetail.Journal
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
 import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterAlreadyExistsException;
 import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterValidationException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -117,6 +118,13 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(JournalMasterNotFoundException.class)
         public ResponseEntity<ErrorResponse> handleJournalMasterNotFound(
                         JournalMasterNotFoundException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(JournalMasterValidationException.class)
+        public ResponseEntity<ErrorResponse> handleJournalMasterValidation(
+                        JournalMasterValidationException ex, HttpServletRequest request) {
                 return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
                                 HttpStatus.BAD_REQUEST);
         }
