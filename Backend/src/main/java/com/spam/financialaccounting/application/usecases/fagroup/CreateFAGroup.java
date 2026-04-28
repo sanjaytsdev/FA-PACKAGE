@@ -1,4 +1,4 @@
-package com.spam.financialaccounting.application.usecases;
+package com.spam.financialaccounting.application.usecases.fagroup;
 
 import java.math.BigDecimal;
 import java.util.Arrays;

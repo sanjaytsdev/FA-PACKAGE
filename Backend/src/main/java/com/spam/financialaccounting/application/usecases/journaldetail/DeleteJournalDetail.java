@@ -1,4 +1,4 @@
-package com.spam.financialaccounting.application.usecases;
+package com.spam.financialaccounting.application.usecases.journaldetail;
 
 import org.springframework.stereotype.Service;
 
