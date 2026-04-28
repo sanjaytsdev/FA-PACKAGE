@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
 import com.spam.financialaccounting.domain.repository.JournalMasterRepository;
 import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterValidationException;
 
 @Service
 public class DeleteJournalMaster {
