@@ -1,4 +1,4 @@
-package com.spam.financialaccounting.application.usecases;
+package com.spam.financialaccounting.application.usecases.journalmaster;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
