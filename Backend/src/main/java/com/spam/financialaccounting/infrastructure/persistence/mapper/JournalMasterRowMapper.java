@@ -17,7 +17,7 @@ public class JournalMasterRowMapper implements RowMapper<JournalMaster> {
     public JournalMaster mapRow(ResultSet rs, int rowNum) throws SQLException {
         String jId = rs.getString("J_ID");
         String jDoc = rs.getString("J_DOC");
-        LocalDateTime jDate = rs.getTimestamp("J_DATE").toLocalDateTime();
+        LocalDateTime jDate = LocalDateTime.parse(rs.getString("J_DATE"));
         BigDecimal jAmount = rs.getBigDecimal("J_AMOUNT");
         String jNarr = rs.getString("J_NARR");
 
