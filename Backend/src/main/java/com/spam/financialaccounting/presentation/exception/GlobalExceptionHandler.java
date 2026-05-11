@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -170,6 +171,15 @@ public class GlobalExceptionHandler {
                                 .orElse("Validation error");
 
                 return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, errorMessage, request),
+                                HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(HttpMessageNotReadableException.class)
+        public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
+                        HttpMessageNotReadableException ex,
+                        HttpServletRequest request) {
+                return new ResponseEntity<>(
+                                buildResponse(HttpStatus.BAD_REQUEST, "Request body is missing or invalid", request),
                                 HttpStatus.BAD_REQUEST);
         }
 }
