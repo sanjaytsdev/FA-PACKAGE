@@ -32,7 +32,10 @@ public class JournalMasterRepositoryJDBC implements JournalMasterRepository {
             throw new JournalMasterAlreadyExistsException("JournalMaster with ID " + journalMaster.getJId() + " already exists");
         }
         String sql = "INSERT INTO JournalMaster(J_ID,J_DOC,J_DATE,J_AMOUNT,J_NARR) VALUES (?,?,?,?,?)";
-        jdbcTemplate.update(sql, journalMaster.getJId(),journalMaster.getJDoc(),journalMaster.getJDate(),journalMaster.getJAmount(),journalMaster.getJNarr());
+        // Convert to ISO-8601 String: SQLite stores DATETIME as TEXT, RowMapper reads via getString()
+        String dateStr = journalMaster.getJDate() != null ? journalMaster.getJDate().toString() : null;
+        jdbcTemplate.update(sql, journalMaster.getJId(), journalMaster.getJDoc(), dateStr,
+                journalMaster.getJAmount(), journalMaster.getJNarr());
 
         return journalMaster;
     }
@@ -58,7 +61,9 @@ public class JournalMasterRepositoryJDBC implements JournalMasterRepository {
     @Transactional
     public JournalMaster update(JournalMaster journalMaster) {
         String sql = "UPDATE JournalMaster SET J_DOC = ?, J_DATE = ?, J_AMOUNT = ?, J_NARR = ? WHERE J_ID = ?";
-        int rowsAffected = jdbcTemplate.update(sql, journalMaster.getJDoc(), journalMaster.getJDate(),
+        // Convert to ISO-8601 String: SQLite stores DATETIME as TEXT, RowMapper reads via getString()
+        String dateStr = journalMaster.getJDate() != null ? journalMaster.getJDate().toString() : null;
+        int rowsAffected = jdbcTemplate.update(sql, journalMaster.getJDoc(), dateStr,
                 journalMaster.getJAmount(),
                 journalMaster.getJNarr(),
                 journalMaster.getJId());
