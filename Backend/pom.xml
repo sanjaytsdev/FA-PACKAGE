@@ -77,12 +77,13 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- In-Memory Database for @JdbcTest -->
-<dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>
-    <scope>test</scope>  <!-- only active during tests, never in production -->
-</dependency>
+		<!-- H2 in-memory database for @JdbcTest integration tests -->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 
 
 		<dependency>
