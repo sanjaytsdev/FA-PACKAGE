@@ -87,7 +87,7 @@ public class JournalMasterControllerTest {
         mockMvc.perform(post("/api/v1/journal-masters")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validDTO)))
-                .andExpect(status().isBadRequest())   // GlobalExceptionHandler maps this to 400
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Journal voucher with ID JV00000001 already exists"));
     }
 
@@ -153,8 +153,8 @@ public class JournalMasterControllerTest {
     }
 
     @Test
-    @DisplayName("PUT /{jId} → 400 when journal ID does not exist")
-    void update_ShouldReturn400_WhenNotFound() throws Exception {
+    @DisplayName("PUT /{jId} → 404 when journal ID does not exist")
+    void update_ShouldReturn404_WhenNotFound() throws Exception {
         when(updateUseCase.execute(any(JournalMaster.class)))
                 .thenThrow(new JournalMasterNotFoundException("Journal voucher with ID JV99999999 not found"));
 
@@ -163,7 +163,7 @@ public class JournalMasterControllerTest {
         mockMvc.perform(put("/api/v1/journal-masters/JV99999999")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Journal voucher with ID JV99999999 not found"));
     }
 
@@ -188,13 +188,13 @@ public class JournalMasterControllerTest {
     }
 
     @Test
-    @DisplayName("DELETE /{jId} → 400 when journal does not exist")
-    void delete_ShouldReturn400_WhenNotFound() throws Exception {
+    @DisplayName("DELETE /{jId} → 404 when journal does not exist")
+    void delete_ShouldReturn404_WhenNotFound() throws Exception {
         when(deleteUseCase.execute("JV99999999"))
                 .thenThrow(new JournalMasterNotFoundException("Journal voucher with ID JV99999999 not found"));
 
         mockMvc.perform(delete("/api/v1/journal-masters/JV99999999"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Journal voucher with ID JV99999999 not found"));
     }
 
@@ -229,13 +229,13 @@ public class JournalMasterControllerTest {
     }
 
     @Test
-    @DisplayName("GET /{jId} → 400 when journal ID does not exist")
-    void getById_ShouldReturn400_WhenNotFound() throws Exception {
+    @DisplayName("GET /{jId} → 404 when journal ID does not exist")
+    void getById_ShouldReturn404_WhenNotFound() throws Exception {
         when(getByIdUseCase.execute("JV99999999"))
                 .thenThrow(new JournalMasterNotFoundException("Journal voucher with ID JV99999999 not found"));
 
         mockMvc.perform(get("/api/v1/journal-masters/JV99999999"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Journal voucher with ID JV99999999 not found"));
     }
 
