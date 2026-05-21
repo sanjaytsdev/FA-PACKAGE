@@ -119,8 +119,8 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(JournalMasterNotFoundException.class)
         public ResponseEntity<ErrorResponse> handleJournalMasterNotFound(
                         JournalMasterNotFoundException ex, HttpServletRequest request) {
-                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
-                                HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request),
+                                HttpStatus.NOT_FOUND);
         }
 
         @ExceptionHandler(JournalMasterValidationException.class)
@@ -133,8 +133,8 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(JournalMasterAlreadyExistsException.class)
         public ResponseEntity<ErrorResponse> handleJournalMasterAlreadyExistsException(
                         JournalMasterAlreadyExistsException ex, HttpServletRequest request) {
-                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
-                                HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
         }
 
         // --- Generic Handlers ---

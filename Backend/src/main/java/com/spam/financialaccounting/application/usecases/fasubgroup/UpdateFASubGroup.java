@@ -7,10 +7,9 @@ import java.math.BigDecimal;
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.domain.repository.FAGroupRepository;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
+import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupNotFoundException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
-import com.spam.financialaccounting.presentation.exception.fasubgroup.
-FASubGroupValidationException;
-import com.spam.financialaccounting.presentation.exception.fagroup.*;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupValidationException;
 
 @Service
 public class UpdateFASubGroup {
@@ -44,18 +43,18 @@ public class UpdateFASubGroup {
         
         // 4. Description Validation
         if(subGroup.getSDesc() == null || subGroup.getSDesc().isBlank()) {
-            throw new FAGroupValidationException("Description cannot be null or empty.");
+            throw new FASubGroupValidationException("Description cannot be null or empty.");
         }
 
         if(subGroup.getSDesc().length() >50) {
-            throw new FAGroupValidationException("Description cannot exceed 50 characters.");
+            throw new FASubGroupValidationException("Description cannot exceed 50 characters.");
         }
 
         // 5. S_DRCR Validation
         if(subGroup.getSDrCr() != null){
             String drCr = subGroup.getSDrCr().toUpperCase();
             if(!drCr.equals("DR") && !drCr.equals("CR")) {
-                throw new FAGroupValidationException("S_DRCR must be either 'DR' or 'CR'");
+                throw new FASubGroupValidationException("S_DRCR must be either 'DR' or 'CR'");
             }
             subGroup.setSDrCr(drCr);
         }
