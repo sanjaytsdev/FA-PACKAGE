@@ -13,6 +13,10 @@ import java.util.concurrent.CompletableFuture;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.spam.financialaccounting.desktop.model.FAGroup;
+import com.spam.financialaccounting.desktop.model.FASubGroup;
+import com.spam.financialaccounting.desktop.model.JournalDetail;
+import com.spam.financialaccounting.desktop.model.JournalMaster;
 
 public class ApiClient {
     private static final String BASE_URL = "http://localhost:8080/api/v1";
