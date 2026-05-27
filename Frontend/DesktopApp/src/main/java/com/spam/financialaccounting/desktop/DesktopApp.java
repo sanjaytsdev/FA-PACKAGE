@@ -2,6 +2,7 @@ package com.spam.financialaccounting.desktop;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
 
+import com.spam.financialaccounting.desktop.ui.UiUtils;
 import com.spam.financialaccounting.desktop.view.*;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -44,8 +45,7 @@ public class DesktopApp extends Application {
 
         // Scene creation
         Scene scene = new Scene(rootLayout, 1100, 700);
-        String css = getClass().getResource("/styles.css").toExternalForm();
-        scene.getStylesheets().add(css);
+        UiUtils.applyStylesheet(scene);
 
         primaryStage.setTitle("FA-PACKAGE | Desktop Financial Accounting");
         primaryStage.setScene(scene);
@@ -89,7 +89,7 @@ public class DesktopApp extends Application {
     private VBox createSidebar() {
         VBox sidebar = new VBox();
         sidebar.getStyleClass().add("sidebar");
-        sidebar.setPrefWidth(240);
+        sidebar.setPrefWidth(190);
         sidebar.setPadding(new Insets(20, 15, 20, 15));
 
         Label brandLabel = new Label("FA-PACKAGE");

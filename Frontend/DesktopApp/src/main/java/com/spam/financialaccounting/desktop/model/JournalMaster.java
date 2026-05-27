@@ -11,7 +11,6 @@ public class JournalMaster {
     private String jId;
     private String jDoc;
     
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime jDate;
     private BigDecimal jAmount;
     private String jNarr;

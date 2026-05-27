@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.spam.financialaccounting.desktop.model.FAGroup;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
@@ -19,7 +20,31 @@ import com.spam.financialaccounting.desktop.model.JournalDetail;
 import com.spam.financialaccounting.desktop.model.JournalMaster;
 
 public class ApiClient {
-    private static final String BASE_URL = "http://localhost:8080/api/v1";
+    private static final String BASE_URL = loadBaseUrl();
+
+    private static String loadBaseUrl() {
+        java.util.Properties props = new java.util.Properties();
+        java.io.File configFile = new java.io.File("config.properties");
+        if (configFile.exists()) {
+            try (java.io.FileInputStream in = new java.io.FileInputStream(configFile)) {
+                props.load(in);
+                String url = props.getProperty("api.base.url");
+                if (url != null && !url.trim().isEmpty()) {
+                    return url.trim();
+                }
+            } catch (Exception ex) {
+                System.err.println("Error loading config.properties: " + ex.getMessage());
+            }
+        } else {
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(configFile)) {
+                props.setProperty("api.base.url", "http://localhost:8080/api/v1");
+                props.store(out, "FA-PACKAGE Desktop Client Settings");
+            } catch (Exception ex) {
+                System.err.println("Error creating default config.properties: " + ex.getMessage());
+            }
+        }
+        return "http://localhost:8080/api/v1";
+    }
     private final HttpClient client;
     private final ObjectMapper mapper;
 
@@ -28,6 +53,7 @@ public class ApiClient {
                 .build();
         this.mapper = new ObjectMapper();
         this.mapper.registerModule(new JavaTimeModule());
+        this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public CompletableFuture<Boolean> pingAsync() {
@@ -176,6 +202,15 @@ public class ApiClient {
         return mapper.readValue(response.body(), JournalDetail.class);
     }
 
+    public void deleteJournalDetail(String jId, String jCode, String jDrCr) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/journal-details/" + jId + "/" + jCode + "/" + jDrCr))
+                .DELETE()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+    }
+
     private void handleErrorResponse(HttpResponse<String> response) throws IOException {
         if (response.statusCode() >= 400) {
             String errorMsg = "HTTP Status Code " + response.statusCode();
@@ -188,9 +223,8 @@ public class ApiClient {
                 } else if (map.containsKey("error")) {
                     errorMsg = map.get("error").toString();
                 }
-            } catch (Exception ignored) {
-                throw new IOException(errorMsg);
-            }
+            } catch (Exception ignored) {}
+            throw new IOException(errorMsg);
         }
     }
-}
+}

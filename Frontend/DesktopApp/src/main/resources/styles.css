@@ -181,18 +181,27 @@
 
 .table-view .column-header {
   -fx-background-color: transparent;
-  -fx-text-fill: #94a3b8;
-  -fx-font-weight: bold;
   -fx-border-color: #334155;
   -fx-border-width: 0 1 1 0;
   -fx-size: 35;
+}
+
+.table-view .column-header .label {
+  -fx-text-fill: #94a3b8;
+  -fx-font-weight: bold;
 }
 
 .table-row-cell {
   -fx-background-color: #0f172a;
   -fx-border-color: #1e293b;
   -fx-border-width: 0 0 1 0;
-  -fx-text-fill: #f8fafc;
+}
+
+.table-cell {
+  -fx-text-fill: #ffffff; /* Explicitly set to bright white */
+  -fx-font-family: "Segoe UI", "Inter", sans-serif;
+  -fx-font-size: 13px;
+  -fx-alignment: center-left;
 }
 
 .table-row-cell:filled:hover {
@@ -201,10 +210,9 @@
 
 .table-row-cell:filled:selected {
   -fx-background-color: #6366f1;
-  -fx-text-fill: #ffffff;
 }
 
-.table-row-cell:filled:selected .label {
+.table-row-cell:filled:selected .table-cell {
   -fx-text-fill: #ffffff;
 }
 
@@ -256,3 +264,52 @@
   -fx-text-fill: #6366f1;
   -fx-font-weight: bold;
 }
+
+/* Premium Dark-Slate ScrollPane Styling */
+.scroll-pane {
+  -fx-background-color: transparent;
+  -fx-background: transparent;
+  -fx-border-color: transparent;
+  -fx-padding: 0;
+}
+
+.scroll-pane .viewport {
+  -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar {
+  -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical {
+  -fx-pref-width: 8px;
+}
+
+.scroll-pane .scroll-bar:horizontal {
+  -fx-pref-height: 8px;
+}
+
+.scroll-pane .scroll-bar .track {
+  -fx-background-color: transparent;
+  -fx-border-color: transparent;
+}
+
+.scroll-pane .scroll-bar .thumb {
+  -fx-background-color: #334155;
+  -fx-background-radius: 4px;
+  -fx-border-radius: 4px;
+}
+
+.scroll-pane .scroll-bar .thumb:hover {
+  -fx-background-color: #475569;
+}
+
+.scroll-pane .scroll-bar .increment-button,
+.scroll-pane .scroll-bar .decrement-button,
+.scroll-pane .scroll-bar .increment-arrow,
+.scroll-pane .scroll-bar .decrement-arrow {
+  -fx-background-color: transparent;
+  -fx-shape: "";
+  -fx-padding: 0;
+}
+
