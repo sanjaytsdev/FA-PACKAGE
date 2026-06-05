@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 12px;
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased overflow-x-hidden;
+    scrollbar-gutter: stable;
+  }
+}
+
+/* ── Custom font-size utility missing from Tailwind v3 ─────────────────────── */
+@layer utilities {
+  .text-2xs {
+    font-size: 0.625rem;     /* 10px at 16px root, ~7.5px at our 12px root */
+    line-height: 1rem;
+  }
+}
+
+/* ── Elegant Slate Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ── Clean focus ring for select elements (overrides ugly webkit default) ───── */
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #6366f1; /* indigo-500 */
+}
+
+/* ── Date input color fix on dark background ────────────────────────────────── */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+  cursor: pointer;
+}
