@@ -121,6 +121,15 @@ public class FASubGroupsView extends HBox {
 
         parentSelect = new ComboBox<>();
         parentSelect.setPromptText("Select Parent Account Group");
+        parentSelect.setOnAction(e -> {
+            FAGroup selected = parentSelect.getValue();
+            // Auto-fill sub-type and normal side only when creating a new account
+            if (selected != null && selectedSubGroup == null) {
+                String type = selected.getAccountType();
+                typeInput.setText(type + "0");
+                drcrSelect.setValue("0".equals(type) || "4".equals(type) ? "DR" : "CR");
+            }
+        });
 
         typeInput = new TextField();
         typeInput.setPromptText("2 digit type (e.g. 00-49)");
