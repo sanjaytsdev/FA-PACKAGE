@@ -226,4 +226,41 @@ public class JournalMasterRepositoryJDBCTest {
 
         assertThat(repository.existsById("JV00000001")).isFalse();
     }
+
+    // generateNextId()
+
+    @Test
+    @DisplayName("[T15] generateNextId() should return JV{year}0001 when table is empty")
+    void generateNextId_ShouldReturnFirstId_WhenTableIsEmpty() {
+        int year = LocalDateTime.now().getYear();
+        String expected = String.format("JV%d0001", year);
+
+        String result = repository.generateNextId();
+
+        assertThat(result).isEqualTo(expected);
+        assertThat(result).hasSize(10);
+    }
+
+    @Test
+    @DisplayName("[T16] generateNextId() should increment sequence from existing max ID in current year")
+    void generateNextId_ShouldIncrementSequence_WhenRecordsExist() {
+        int year = LocalDateTime.now().getYear();
+        insertRow(String.format("JV%d0005", year), "JV", FIXED_DATE, BigDecimal.ONE, "Entry");
+
+        String result = repository.generateNextId();
+
+        assertThat(result).isEqualTo(String.format("JV%d0006", year));
+    }
+
+    @Test
+    @DisplayName("[T17] generateNextId() should ignore records from previous years")
+    void generateNextId_ShouldIgnorePreviousYearRecords() {
+        int year = LocalDateTime.now().getYear();
+        // Insert a high-sequence ID from the previous year
+        insertRow(String.format("JV%d0099", year - 1), "JV", FIXED_DATE, BigDecimal.ONE, "Old");
+
+        String result = repository.generateNextId();
+
+        assertThat(result).isEqualTo(String.format("JV%d0001", year));
+    }
 }

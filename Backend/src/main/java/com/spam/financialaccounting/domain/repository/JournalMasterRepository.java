@@ -17,4 +17,6 @@ public interface JournalMasterRepository {
     boolean delete(String jId);
 
     boolean existsById(String jId);
+
+    String generateNextId();
 }

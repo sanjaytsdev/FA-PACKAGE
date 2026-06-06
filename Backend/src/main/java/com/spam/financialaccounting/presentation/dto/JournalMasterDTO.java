@@ -13,8 +13,6 @@ import jakarta.validation.constraints.Size;
 
 public class JournalMasterDTO {
 
-    @NotBlank(message = "Journal ID is required")
-    @Pattern(regexp = "^.{10}$", message = "Journal ID must be exactly 10 characters")
     private String jId;
 
     @NotBlank(message = "Document type is required")
