@@ -1,5 +1,6 @@
 package com.spam.financialaccounting.infrastructure.persistence.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -86,8 +87,21 @@ public class JournalMasterRepositoryJDBC implements JournalMasterRepository {
     @Override
     public boolean existsById(String jId) {
         String sql = "SELECT COUNT(*) FROM JournalMaster WHERE J_ID = ?";
-        Integer count = jdbcTemplate.queryForObject(sql,Integer.class,jId);
-        return count!=null && count>0;
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, jId);
+        return count != null && count > 0;
+    }
+
+    @Override
+    public String generateNextId() {
+        int year = LocalDateTime.now().getYear();
+        String prefix = String.format("JV%d", year); // e.g. "JV2024"
+        String sql = "SELECT MAX(J_ID) FROM JournalMaster WHERE J_ID LIKE ?";
+        String maxId = jdbcTemplate.queryForObject(sql, String.class, prefix + "%");
+        int sequence = 1;
+        if (maxId != null) {
+            sequence = Integer.parseInt(maxId.substring(prefix.length())) + 1;
+        }
+        return String.format("%s%04d", prefix, sequence);
     }
 
 }

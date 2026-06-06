@@ -92,14 +92,16 @@ public class JournalMasterControllerTest {
     }
 
     @Test
-    @DisplayName("POST / → 400 when jId is blank")
-    void create_ShouldReturn400_WhenJIdIsBlank() throws Exception {
-        JournalMasterDTO bad = new JournalMasterDTO("", "JV", FIXED_DATE, BigDecimal.ZERO, null);
+    @DisplayName("POST / → 201 Created when jId is omitted — backend auto-generates it")
+    void create_ShouldReturn201_WhenJIdIsOmitted() throws Exception {
+        JournalMasterDTO noId = new JournalMasterDTO(null, "JV", FIXED_DATE, BigDecimal.ZERO, null);
+        when(createUseCase.execute(any(JournalMaster.class))).thenReturn(sampleEntity);
 
         mockMvc.perform(post("/api/v1/journal-masters")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(bad)))
-                .andExpect(status().isBadRequest());
+                        .content(objectMapper.writeValueAsString(noId)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.jId").value("JV00000001"));
     }
 
     @Test

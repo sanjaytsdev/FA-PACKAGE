@@ -20,9 +20,9 @@ public class CreateJournalMaster {
     }
 
     public JournalMaster execute(JournalMaster journalMaster) {
-        // validate journal ID format(10 characters)
-        if (journalMaster.getJId() == null || journalMaster.getJId().length() != 10) {
-            throw new JournalMasterValidationException("Journal ID must be exactly 10 characters");
+        // Auto-generate ID if not supplied by caller
+        if (journalMaster.getJId() == null || journalMaster.getJId().isBlank()) {
+            journalMaster.setJId(journalMasterRepository.generateNextId());
         }
 
         // validate document type(2 characters)

@@ -99,43 +99,48 @@ public class CreateJournalMasterTest {
     }
 
     // ─────────────────────────────────────────────────────────
-    // Journal ID Validation
+    // Journal ID Auto-Generation
     // ─────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Should throw ValidationException when jId is null")
-    void shouldThrow_WhenJIdIsNull() {
+    @DisplayName("Should auto-generate jId when jId is null")
+    void shouldAutoGenerateId_WhenJIdIsNull() {
         JournalMaster master = new JournalMaster(null, "JV", FIXED_DATE, BigDecimal.ZERO, null);
+        when(journalMasterRepository.generateNextId()).thenReturn("JV20260001");
+        when(journalMasterRepository.existsById("JV20260001")).thenReturn(false);
+        when(journalMasterRepository.save(master)).thenReturn(master);
 
-        assertThatThrownBy(() -> createJournalMaster.execute(master))
-                .isInstanceOf(JournalMasterValidationException.class)
-                .hasMessageContaining("Journal ID must be exactly 10 characters");
+        createJournalMaster.execute(master);
 
-        verify(journalMasterRepository, never()).save(any());
+        assertThat(master.getJId()).isEqualTo("JV20260001");
+        verify(journalMasterRepository).generateNextId();
     }
 
     @Test
-    @DisplayName("Should throw ValidationException when jId is less than 10 characters")
-    void shouldThrow_WhenJIdIsTooShort() {
-        JournalMaster master = new JournalMaster("JV001", "JV", FIXED_DATE, BigDecimal.ZERO, null);
+    @DisplayName("Should auto-generate jId when jId is blank")
+    void shouldAutoGenerateId_WhenJIdIsBlank() {
+        JournalMaster master = new JournalMaster("   ", "JV", FIXED_DATE, BigDecimal.ZERO, null);
+        when(journalMasterRepository.generateNextId()).thenReturn("JV20260001");
+        when(journalMasterRepository.existsById("JV20260001")).thenReturn(false);
+        when(journalMasterRepository.save(master)).thenReturn(master);
 
-        assertThatThrownBy(() -> createJournalMaster.execute(master))
-                .isInstanceOf(JournalMasterValidationException.class)
-                .hasMessageContaining("Journal ID must be exactly 10 characters");
+        createJournalMaster.execute(master);
 
-        verify(journalMasterRepository, never()).save(any());
+        assertThat(master.getJId()).isEqualTo("JV20260001");
+        verify(journalMasterRepository).generateNextId();
     }
 
     @Test
-    @DisplayName("Should throw ValidationException when jId is more than 10 characters")
-    void shouldThrow_WhenJIdIsTooLong() {
-        JournalMaster master = new JournalMaster("JV000000001234", "JV", FIXED_DATE, BigDecimal.ZERO, null);
+    @DisplayName("Should skip auto-generation and use caller-supplied jId")
+    void shouldUseProvidedId_WhenJIdIsSupplied() {
+        JournalMaster master = new JournalMaster("JV00000001", "JV", FIXED_DATE, BigDecimal.ZERO, null);
+        when(journalMasterRepository.existsById("JV00000001")).thenReturn(false);
+        when(journalMasterRepository.save(master)).thenReturn(master);
 
-        assertThatThrownBy(() -> createJournalMaster.execute(master))
-                .isInstanceOf(JournalMasterValidationException.class)
-                .hasMessageContaining("Journal ID must be exactly 10 characters");
+        createJournalMaster.execute(master);
 
-        verify(journalMasterRepository, never()).save(any());
+        verify(journalMasterRepository, never()).generateNextId();
+        verify(journalMasterRepository).save(master);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -217,19 +222,21 @@ public class CreateJournalMasterTest {
     }
 
     // ─────────────────────────────────────────────────────────
-    // Validation Order: jId checked BEFORE existsById
+    // Execution Order: generateNextId → jDoc → existsById → save
     // ─────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("Should throw jId validation error before checking existence in repository")
-    void shouldThrowJIdError_BeforeCallingRepository() {
+    @DisplayName("Should call generateNextId() when jId is null, then proceed through the full pipeline")
+    void shouldCallGenerateNextId_ThenProceedToSave_WhenJIdIsNull() {
         JournalMaster master = new JournalMaster(null, "JV", FIXED_DATE, BigDecimal.ZERO, null);
+        when(journalMasterRepository.generateNextId()).thenReturn("JV20260001");
+        when(journalMasterRepository.existsById("JV20260001")).thenReturn(false);
+        when(journalMasterRepository.save(master)).thenReturn(master);
 
-        assertThatThrownBy(() -> createJournalMaster.execute(master))
-                .isInstanceOf(JournalMasterValidationException.class);
+        createJournalMaster.execute(master);
 
-        // existsById must NEVER be called if jId is invalid
-        verify(journalMasterRepository, never()).existsById(any());
-        verify(journalMasterRepository, never()).save(any());
+        verify(journalMasterRepository).generateNextId();
+        verify(journalMasterRepository).existsById("JV20260001");
+        verify(journalMasterRepository).save(master);
     }
 }
