@@ -1,2 +1,7 @@
 *.db
 *.md
+target/
+*.class
+*.jar
+*.war
+*.ear
