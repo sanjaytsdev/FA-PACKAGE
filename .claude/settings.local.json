@@ -5,7 +5,14 @@
       "Bash(for dir:*)",
       "Bash(do echo:*)",
       "Read(//c/Users/amith/OneDrive/Desktop/Projects/FA-PACKAGE/*/$dir/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(./mvnw -q clean compile)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\amith\\\\OneDrive\\\\Desktop\\\\Projects\\\\FA-PACKAGE\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Select-Object -First 20 FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\amith\\\\OneDrive\\\\Desktop\\\\Projects\\\\FA-PACKAGE\\\\Backend\\\\src\\\\test\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(./mvnw test *)"
     ]
   }
 }

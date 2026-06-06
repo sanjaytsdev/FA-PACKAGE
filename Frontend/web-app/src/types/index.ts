@@ -16,7 +16,7 @@ export interface FASubGroup {
 }
 
 export interface JournalMaster {
-  jId: string;
+  jId?: string; // omit on create — backend auto-generates
   jDoc: string;
   jDate: string; // ISO datetime
   jAmount: number;
