@@ -18,10 +18,10 @@ interface VoucherLine {
 
 export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [ledgers, setLedgers] = useState<FASubGroup[]>([]);
-  const [voucherId, setVoucherId] = useState('');
   const [voucherDate, setVoucherDate] = useState(new Date().toISOString().split('T')[0]);
   const [narration, setNarration] = useState('');
-  
+  const [generatedId, setGeneratedId] = useState<string | null>(null);
+
   const [lines, setLines] = useState<VoucherLine[]>([
     { id: 1, sCode: '', jDrCr: 'DR', jAmount: '' },
     { id: 2, sCode: '', jDrCr: 'CR', jAmount: '' },
@@ -34,9 +34,9 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({ isOpen, onClos
     if (isOpen) {
       apiClient.getLedgers().then(setLedgers).catch(() => {});
       // Reset form
-      setVoucherId('');
       setVoucherDate(new Date().toISOString().split('T')[0]);
       setNarration('');
+      setGeneratedId(null);
       setLines([
         { id: 1, sCode: '', jDrCr: 'DR', jAmount: '' },
         { id: 2, sCode: '', jDrCr: 'CR', jAmount: '' },
@@ -85,12 +85,6 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({ isOpen, onClos
       return;
     }
 
-    const trimmedId = voucherId.trim();
-    if (trimmedId.length !== 10) {
-      setError('Voucher ID must be exactly 10 characters.');
-      return;
-    }
-
     // Validate details
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
@@ -105,26 +99,26 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({ isOpen, onClos
       }
     }
 
-    let masterCreated = false;
+    let createdId: string | null = null;
     try {
       setLoading(true);
       setError(null);
 
-      // Step 1: Create Master header
+      // Step 1: Create Master header — jId omitted, backend auto-generates it
       const masterPayload: JournalMaster = {
-        jId: trimmedId,
         jDoc: 'JV',
         jDate: new Date(voucherDate).toISOString(),
         jAmount: totalDebits,
         jNarr: narration.trim(),
       };
-      await apiClient.createJournalMaster(masterPayload);
-      masterCreated = true;
+      const created = await apiClient.createJournalMaster(masterPayload);
+      createdId = created.jId!;
+      setGeneratedId(createdId);
 
       // Step 2: Create Detail lines sequentially
       for (const line of lines) {
         const detailPayload: JournalDetail = {
-          jId: trimmedId,
+          jId: createdId,
           jCode: line.sCode,
           jDrCr: line.jDrCr,
           jAmount: Number(line.jAmount),
@@ -135,20 +129,16 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({ isOpen, onClos
       onSuccess();
       onClose();
     } catch (err: any) {
-      // Rollback: if master was already created but details failed,
-      // delete the orphaned master to maintain DB integrity
-      if (masterCreated) {
-        const trimmedId = voucherId.trim();
+      // Rollback: if master was created but details failed, delete orphaned master
+      if (createdId) {
         try {
-          // Delete any partial details first
-          const partialDetails = await apiClient.getJournalDetails(trimmedId);
+          const partialDetails = await apiClient.getJournalDetails(createdId);
           for (const d of partialDetails) {
-            await apiClient.deleteJournalDetail(d.jId, d.jCode, d.jDrCr);
+            await apiClient.deleteJournalDetail(d.jId!, d.jCode, d.jDrCr);
           }
-          await apiClient.deleteJournalMaster(trimmedId);
+          await apiClient.deleteJournalMaster(createdId);
         } catch {
-          // Rollback best-effort only — log silently
-          console.error('[FA] Rollback attempt for orphaned master failed. Manual cleanup may be required for ID:', trimmedId);
+          console.error('[FA] Rollback failed for orphaned master ID:', createdId);
         }
       }
       setError(err.message || 'Submission failed. Any partial data has been rolled back.');
@@ -181,19 +171,7 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({ isOpen, onClos
           )}
 
           {/* Master Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-950/30 p-4 border border-slate-800/40 rounded-xl">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Voucher ID (PK)</label>
-              <input
-                type="text"
-                maxLength={10}
-                placeholder="JV00000001 (10 Chars)"
-                value={voucherId}
-                onChange={(e) => setVoucherId(e.target.value.toUpperCase())}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors placeholder-slate-700"
-              />
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-950/30 p-4 border border-slate-800/40 rounded-xl">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Voucher Date</label>
               <input
@@ -238,7 +216,13 @@ export const NewVoucherModal: React.FC<NewVoucherModalProps> = ({ isOpen, onClos
                   {/* Account select */}
                   <select
                     value={line.sCode}
-                    onChange={(e) => updateLine(line.id, 'sCode', e.target.value)}
+                    onChange={(e) => {
+                      const selectedCode = e.target.value;
+                      updateLine(line.id, 'sCode', selectedCode);
+                      // Auto-fill DR/CR from the account's normal side
+                      const ledger = ledgers.find((l) => l.sCode === selectedCode);
+                      if (ledger) updateLine(line.id, 'jDrCr', ledger.sDrCr);
+                    }}
                     className="flex-1 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2 text-sm font-semibold text-slate-200 transition-colors"
                   >
                     <option value="">Select Ledger Account</option>

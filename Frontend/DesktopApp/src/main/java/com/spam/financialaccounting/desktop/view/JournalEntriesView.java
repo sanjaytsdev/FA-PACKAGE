@@ -216,24 +216,14 @@ public class JournalEntriesView extends HBox {
         headerGrid.setHgap(10);
         headerGrid.setVgap(10);
 
-        TextField idInput = new TextField();
-        idInput.setPromptText("JV12345678 (10 characters)");
-
-        TextField docInput = new TextField("JV");
-        docInput.setDisable(true); // default to JV
-
         DatePicker datePicker = new DatePicker(LocalDate.now());
         TextField narrInput = new TextField();
 
         narrInput.setPromptText("Voucher narrative");
-        headerGrid.add(new Label("Voucher ID:"), 0, 0);
-        headerGrid.add(idInput, 1, 0);
-        headerGrid.add(new Label("Doc Type:"), 2, 0);
-        headerGrid.add(docInput, 3, 0);
-        headerGrid.add(new Label("Voucher Date:"), 0, 1);
-        headerGrid.add(datePicker, 1, 1);
-        headerGrid.add(new Label("Narration:"), 0, 2);
-        headerGrid.add(narrInput, 1, 2, 3, 1);
+        headerGrid.add(new Label("Voucher Date:"), 0, 0);
+        headerGrid.add(datePicker, 1, 0);
+        headerGrid.add(new Label("Narration:"), 0, 1);
+        headerGrid.add(narrInput, 1, 1, 3, 1);
 
         // Lines container
         VBox linesContainer = new VBox(10);
@@ -319,18 +309,10 @@ public class JournalEntriesView extends HBox {
             addLineBtn.setOnAction(evt -> addLineRow(linesContainer, accounts, lineRows, recalculator));
 
             saveVoucherBtn.setOnAction(evt -> {
-                // Post Master, then Post details
-                String voucherId = idInput.getText().trim();
                 String narration = narrInput.getText().trim();
                 LocalDateTime voucherTime = datePicker.getValue().atStartOfDay();
 
-                if (voucherId.length() != 10) {
-                    UiUtils.showAlert(Alert.AlertType.WARNING, "Validation Error", "Invalid Voucher Id",
-                            "Voucher ID must be exactly 10 characters.");
-                    return;
-                }
-
-                // Fixed: Added critical validation to verify that every detail line is fully completed
+                // Validate that every detail line is fully completed
                 for (VoucherLineRow row : lineRows) {
                     if (row.getAccountCode() == null) {
                         UiUtils.showAlert(Alert.AlertType.WARNING, "Validation Error", "Incomplete Line Item", "Please select a valid ledger account for all entry lines.");
@@ -351,23 +333,25 @@ public class JournalEntriesView extends HBox {
                     }
                 }
 
-                JournalMaster master = new JournalMaster(voucherId, "JV", voucherTime, totalAmount, narration);
+                // jId omitted — backend auto-generates it
+                JournalMaster master = new JournalMaster(null, "JV", voucherTime, totalAmount, narration);
 
                 CompletableFuture.runAsync(() -> {
                     try {
-                        // 1. post master
-                        apiClient.createJournalMaster(master);
+                        // 1. post master and capture auto-generated ID
+                        JournalMaster created = apiClient.createJournalMaster(master);
+                        String generatedId = created.getJId();
 
-                        // 2. post details
+                        // 2. post details using the generated ID
                         for (VoucherLineRow row : lineRows) {
-                            JournalDetail detail = new JournalDetail(voucherId, row.getAccountCode(), row.getDrCr(),
+                            JournalDetail detail = new JournalDetail(generatedId, row.getAccountCode(), row.getDrCr(),
                                     row.getAmount());
                             apiClient.createJournalDetail(detail);
                         }
 
                         Platform.runLater(() -> {
                             UiUtils.showAlert(Alert.AlertType.INFORMATION, "Voucher Posted", "Success",
-                                    "Journal Voucher and lines created successfully.");
+                                    "Journal Voucher posted successfully.\nGenerated ID: " + generatedId);
                             dialog.close();
                             loadMasters();
                         });
@@ -418,8 +402,12 @@ public class JournalEntriesView extends HBox {
             onRecalculate.run();
         });
 
-       // Trigger dynamic calculation updates
-accSelect.setOnAction(e->onRecalculate.run());
+       // Auto-fill DR/CR from account's normal side, then recalculate
+accSelect.setOnAction(e -> {
+    FASubGroup chosen = accSelect.getValue();
+    if (chosen != null) typeSelect.setValue(chosen.getSDrCr());
+    onRecalculate.run();
+});
 typeSelect.setOnAction(e->onRecalculate.run());
 amountInput.textProperty().addListener((obs,o,n)->onRecalculate.run());
 

@@ -286,7 +286,18 @@ export const LedgersView: React.FC = () => {
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Parent Account Group</label>
               <select
                 value={parentGroupCode}
-                onChange={(e) => setParentGroupCode(e.target.value)}
+                onChange={(e) => {
+                  const newCode = e.target.value;
+                  setParentGroupCode(newCode);
+                  // Auto-fill sub-type and normal side when creating (not editing)
+                  if (!selectedLedger) {
+                    const group = groups.find((g) => g.accountCode === newCode);
+                    if (group) {
+                      setSubType(group.accountType + '0');
+                      setDrCr(['0', '4'].includes(group.accountType) ? 'DR' : 'CR');
+                    }
+                  }
+                }}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors"
               >
                 <option value="">Select Parent Group</option>
