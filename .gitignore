@@ -2,3 +2,6 @@
 *.md
 
 .env
+target/
+*.class
+*.jar
