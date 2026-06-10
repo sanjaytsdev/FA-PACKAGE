@@ -245,6 +245,15 @@
   -fx-background-color: #1e293b;
 }
 
+/* DatePicker calendar popup: the month & year labels in the header inherit the
+   near-white -fx-text-fill from .date-picker and become invisible on the light
+   popup header. Force a dark, visible text color for them. */
+.date-picker-popup > * > .month-year-pane,
+.date-picker-popup > * > .month-year-pane .label,
+.date-picker-popup .spinner .label {
+  -fx-text-fill: #1e293b;
+}
+
 /* Alert Overrides */
 .dialog-pane {
   -fx-background-color: #0f172a;

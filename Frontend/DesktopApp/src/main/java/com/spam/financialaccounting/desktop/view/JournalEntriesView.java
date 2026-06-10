@@ -22,7 +22,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class JournalEntriesView extends HBox {
@@ -31,6 +33,7 @@ public class JournalEntriesView extends HBox {
     private TableView<JournalMaster> masterTable;
     private TableView<JournalDetail> detailTable;
     private Button newVoucherBtn;
+    private Button reverseVoucherBtn;
     private Button deleteVoucherBtn;
     private JournalMaster selectedMaster = null;
 
@@ -39,7 +42,7 @@ public class JournalEntriesView extends HBox {
         this.getStyleClass().add("content-pane");
         this.setSpacing(20);
 
-        // Left Pane: Journal Masters list
+        // Left pane: list of journal vouchers
         VBox leftPane = new VBox(15);
         HBox.setHgrow(leftPane, Priority.ALWAYS);
 
@@ -90,15 +93,20 @@ public class JournalEntriesView extends HBox {
         newVoucherBtn.getStyleClass().add("btn-primary");
         newVoucherBtn.setOnAction(e -> openNewVoucherDialog());
 
+        reverseVoucherBtn = new Button("↩ Reverse Voucher");
+        reverseVoucherBtn.getStyleClass().add("btn-secondary");
+        reverseVoucherBtn.setDisable(true);
+        reverseVoucherBtn.setOnAction(e -> reverseSelectedVoucher());
+
         deleteVoucherBtn = new Button("❌ Delete Voucher");
         deleteVoucherBtn.getStyleClass().add("btn-danger");
         deleteVoucherBtn.setDisable(true);
         deleteVoucherBtn.setOnAction(e -> deleteSelectedVoucher());
 
-        btnBox.getChildren().addAll(newVoucherBtn, deleteVoucherBtn);
+        btnBox.getChildren().addAll(newVoucherBtn, reverseVoucherBtn, deleteVoucherBtn);
         leftPane.getChildren().addAll(title, masterTable, btnBox);
 
-        // Right Pane: Details breakdown
+        // Right pane: the line details
         VBox rightPane = new VBox(15);
         rightPane.getStyleClass().add("card");
         rightPane.setPrefWidth(400);
@@ -131,10 +139,12 @@ public class JournalEntriesView extends HBox {
             if (newSel != null) {
                 selectedMaster = newSel;
                 deleteVoucherBtn.setDisable(false);
+                reverseVoucherBtn.setDisable(false);
                 loadDetails(newSel.getJId());
             } else {
                 selectedMaster = null;
                 deleteVoucherBtn.setDisable(true);
+                reverseVoucherBtn.setDisable(true);
                 detailTable.getItems().clear();
             }
         });
@@ -180,28 +190,53 @@ public class JournalEntriesView extends HBox {
             if (btnType == ButtonType.OK) {
                 CompletableFuture.runAsync(() -> {
                     try {
-                        // first delete children details
-                        List<JournalDetail> details = apiClient.getJournalDetailsByJournalId(selectedMaster.getJId());
-                        for (JournalDetail detail : details) {
-                            apiClient.deleteJournalDetail(detail.getJId(), detail.getJCode(), detail.getJDrCr());
-                        }
-                        // Now delete master
-                        apiClient.deleteJournalMaster(selectedMaster.getJId());
+                        // Server drops the header and all its lines in one atomic call.
+                        apiClient.deleteJournalVoucher(selectedMaster.getJId());
                         Platform.runLater(() -> {
                             UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Voucher Deleted",
                                     "Voucher and lines removed successfully.");
+                            detailTable.getItems().clear();
                             loadMasters();
                         });
                     } catch (Exception ex) {
                         Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Deletion Failed",
-                                "API deletion pipeline failed", ex.getMessage()));
+                                "Failed to delete journal voucher", ex.getMessage()));
                     }
                 });
             }
         });
     }
 
-    // Modal view helper for creating double-entry transactions
+    private void reverseSelectedVoucher() {
+        if (selectedMaster == null)
+            return;
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirm Reversal");
+        confirm.setHeaderText("Reverse Voucher ID: " + selectedMaster.getJId());
+        confirm.setContentText("This posts a new balanced voucher with the opposite DR/CR of each line. Proceed?");
+        UiUtils.applyStylesheet(confirm.getDialogPane());
+
+        confirm.showAndWait().ifPresent(btnType -> {
+            if (btnType == ButtonType.OK) {
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        JournalMaster reversal = apiClient.reverseJournalVoucher(selectedMaster.getJId());
+                        Platform.runLater(() -> {
+                            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Voucher Reversed", "Success",
+                                    "Reversing voucher \"" + reversal.getJId() + "\" posted.");
+                            loadMasters();
+                        });
+                    } catch (Exception ex) {
+                        Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Reversal Failed",
+                                "Failed to reverse journal voucher", ex.getMessage()));
+                    }
+                });
+            }
+        });
+    }
+
+    // Pops the modal for entering a new double-entry voucher
     private void openNewVoucherDialog() {
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
@@ -211,7 +246,7 @@ public class JournalEntriesView extends HBox {
         layout.setPadding(new Insets(20));
         layout.getStyleClass().add("root-layout");
 
-        // Header Form fields
+        // Header fields
         GridPane headerGrid = new GridPane();
         headerGrid.setHgap(10);
         headerGrid.setVgap(10);
@@ -220,12 +255,15 @@ public class JournalEntriesView extends HBox {
         TextField narrInput = new TextField();
 
         narrInput.setPromptText("Voucher narrative");
+        narrInput.setPrefWidth(560);
+        narrInput.setMaxWidth(Double.MAX_VALUE);
+        GridPane.setHgrow(narrInput, Priority.ALWAYS);
         headerGrid.add(new Label("Voucher Date:"), 0, 0);
         headerGrid.add(datePicker, 1, 0);
         headerGrid.add(new Label("Narration:"), 0, 1);
         headerGrid.add(narrInput, 1, 1, 3, 1);
 
-        // Lines container
+        // Holds the entry lines
         VBox linesContainer = new VBox(10);
         Label linesTitle = new Label("Voucher Entry Lines (Double-Entry Ledger Grid)");
         linesTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
@@ -235,7 +273,7 @@ public class JournalEntriesView extends HBox {
         scroll.setPrefHeight(250);
         scroll.setStyle("-fx-background-color: transparent; -fx-background: #1e293b;");
 
-        // Double-entry validation bar
+        // Running totals / balance check bar
         HBox totalSummaryBox = new HBox(20);
         totalSummaryBox.setPadding(new Insets(10));
         totalSummaryBox.setAlignment(Pos.CENTER_LEFT);
@@ -256,7 +294,7 @@ public class JournalEntriesView extends HBox {
 
         List<VoucherLineRow> lineRows = new ArrayList<>();
 
-        // Fetch accounts for combo-boxes
+        // Load the accounts that fill the combo-boxes
         CompletableFuture.supplyAsync(() -> {
             try {
                 return apiClient.getLedgerAccounts();
@@ -264,7 +302,7 @@ public class JournalEntriesView extends HBox {
                 return new ArrayList<FASubGroup>();
             }
         }).thenAccept(accounts -> Platform.runLater(() -> {
-            // setup listener to recalculate totals dynamically
+            // recomputes the totals whenever a line changes
             Runnable recalculator = () -> {
                 BigDecimal drSum = BigDecimal.ZERO;
                 BigDecimal crSum = BigDecimal.ZERO;
@@ -299,8 +337,7 @@ public class JournalEntriesView extends HBox {
                 }
             };
 
-            // Add initial 2 lines (standard journal voucher needs at least one debit and
-            // credit)
+            // Start with two lines, since a voucher needs at least one debit and one credit
             addLineRow(linesContainer, accounts, lineRows, recalculator);
             addLineRow(linesContainer, accounts, lineRows, recalculator);
 
@@ -310,9 +347,21 @@ public class JournalEntriesView extends HBox {
 
             saveVoucherBtn.setOnAction(evt -> {
                 String narration = narrInput.getText().trim();
+
+                if (datePicker.getValue() == null) {
+                    UiUtils.showAlert(Alert.AlertType.WARNING, "Validation Error", "Missing Date",
+                            "Please select a voucher date.");
+                    return;
+                }
+                if (narration.length() < 5 || narration.length() > 100) {
+                    UiUtils.showAlert(Alert.AlertType.WARNING, "Validation Error", "Invalid Narration",
+                            "Narration is required and must be between 5 and 100 characters.");
+                    return;
+                }
+
                 LocalDateTime voucherTime = datePicker.getValue().atStartOfDay();
 
-                // Validate that every detail line is fully completed
+                // Make sure every line is filled in
                 for (VoucherLineRow row : lineRows) {
                     if (row.getAccountCode() == null) {
                         UiUtils.showAlert(Alert.AlertType.WARNING, "Validation Error", "Incomplete Line Item", "Please select a valid ledger account for all entry lines.");
@@ -325,33 +374,29 @@ public class JournalEntriesView extends HBox {
                     }
                 }
 
-                // compute total amount (sum of debits)
-                BigDecimal totalAmount = BigDecimal.ZERO;
+                // Build the request. The backend re-checks the debit/credit balance,
+                // works out the total, and generates the ID.
+                List<Map<String, Object>> requestLines = new ArrayList<>();
                 for (VoucherLineRow row : lineRows) {
-                    if ("DR".equals(row.getDrCr()) && row.getAmount() != null) {
-                        totalAmount = totalAmount.add(row.getAmount());
-                    }
+                    Map<String, Object> line = new HashMap<>();
+                    line.put("jCode", row.getAccountCode());
+                    line.put("jDrCr", row.getDrCr());
+                    line.put("jAmount", row.getAmount());
+                    requestLines.add(line);
                 }
-
-                // jId omitted — backend auto-generates it
-                JournalMaster master = new JournalMaster(null, "JV", voucherTime, totalAmount, narration);
+                Map<String, Object> request = new HashMap<>();
+                request.put("jDoc", "JV");
+                request.put("jDate", voucherTime);
+                request.put("jNarr", narration);
+                request.put("lines", requestLines);
 
                 CompletableFuture.runAsync(() -> {
                     try {
-                        // 1. post master and capture auto-generated ID
-                        JournalMaster created = apiClient.createJournalMaster(master);
-                        String generatedId = created.getJId();
-
-                        // 2. post details using the generated ID
-                        for (VoucherLineRow row : lineRows) {
-                            JournalDetail detail = new JournalDetail(generatedId, row.getAccountCode(), row.getDrCr(),
-                                    row.getAmount());
-                            apiClient.createJournalDetail(detail);
-                        }
-
+                        // One call posts the whole voucher; the server validates it.
+                        JournalMaster created = apiClient.postJournalVoucher(request);
                         Platform.runLater(() -> {
                             UiUtils.showAlert(Alert.AlertType.INFORMATION, "Voucher Posted", "Success",
-                                    "Journal Voucher posted successfully.\nGenerated ID: " + generatedId);
+                                    "Journal Voucher posted successfully.\nGenerated ID: " + created.getJId());
                             dialog.close();
                             loadMasters();
                         });
@@ -402,7 +447,7 @@ public class JournalEntriesView extends HBox {
             onRecalculate.run();
         });
 
-       // Auto-fill DR/CR from account's normal side, then recalculate
+       // Default DR/CR to the account's normal side, then recalculate
 accSelect.setOnAction(e -> {
     FASubGroup chosen = accSelect.getValue();
     if (chosen != null) typeSelect.setValue(chosen.getSDrCr());

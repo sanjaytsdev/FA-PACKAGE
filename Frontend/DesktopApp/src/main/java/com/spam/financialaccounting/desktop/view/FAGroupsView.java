@@ -30,7 +30,7 @@ public class FAGroupsView extends HBox {
         this.getStyleClass().add("content-pane");
         this.setSpacing(20);
 
-        // Left Container: List and Header
+        // Left side: header plus the list
         VBox leftPane = new VBox();
         leftPane.setSpacing(15);
         HBox.setHgrow(leftPane, Priority.ALWAYS);
@@ -76,7 +76,7 @@ public class FAGroupsView extends HBox {
 
         leftPane.getChildren().addAll(title, table);
 
-        // Right Container: CRUD Editor Panel
+        // Right side: the create/edit form
         VBox rightPane = new VBox();
         rightPane.getStyleClass().add("card");
         rightPane.setSpacing(15);
@@ -116,6 +116,20 @@ public class FAGroupsView extends HBox {
                 if (string.startsWith("3")) return "3";
                 if (string.startsWith("4")) return "4";
                 return string;
+            }
+        });
+        // Custom button cell so the prompt text reappears after the value is
+        // reset to null (JavaFX does not restore promptText once a value has
+        // been set, which blanks the dropdown title after a submission).
+        typeSelect.setButtonCell(new ListCell<String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(typeSelect.getPromptText());
+                } else {
+                    setText(typeSelect.getConverter().toString(item));
+                }
             }
         });
 
