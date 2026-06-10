@@ -13,14 +13,26 @@ import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupAlread
 import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupNotFoundException;
 import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupValidationException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupHasTransactionsException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupValidationException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.IncompatibleAccountTypeException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.InvalidDrCrValueException;
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailAlreadyExistsException;
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailNotFoundException;
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.InactiveAccountException;
 import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterAlreadyExistsException;
 import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
 import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterValidationException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalVoucherPostedException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.PeriodLockedException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.PostedVoucherCannotBeDeletedException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.VoucherAlreadyReversedException;
+import com.spam.financialaccounting.presentation.exception.openingbalance.OpeningBalanceAlreadyInitializedException;
+import com.spam.financialaccounting.presentation.exception.openingbalance.OpeningBalanceImbalanceException;
+import com.spam.financialaccounting.presentation.exception.periodlock.PeriodLockOverlapException;
+import com.spam.financialaccounting.presentation.exception.periodlock.PeriodLockValidationException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -133,6 +145,92 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(JournalMasterAlreadyExistsException.class)
         public ResponseEntity<ErrorResponse> handleJournalMasterAlreadyExistsException(
                         JournalMasterAlreadyExistsException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
+
+        @ExceptionHandler(JournalVoucherPostedException.class)
+        public ResponseEntity<ErrorResponse> handleJournalVoucherPosted(
+                        JournalVoucherPostedException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
+
+        @ExceptionHandler(PostedVoucherCannotBeDeletedException.class)
+        public ResponseEntity<ErrorResponse> handlePostedVoucherCannotBeDeleted(
+                        PostedVoucherCannotBeDeletedException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
+
+        @ExceptionHandler(VoucherAlreadyReversedException.class)
+        public ResponseEntity<ErrorResponse> handleVoucherAlreadyReversed(
+                        VoucherAlreadyReversedException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
+
+        @ExceptionHandler(PeriodLockedException.class)
+        public ResponseEntity<ErrorResponse> handlePeriodLocked(
+                        PeriodLockedException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request),
+                                HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        @ExceptionHandler(InactiveAccountException.class)
+        public ResponseEntity<ErrorResponse> handleInactiveAccount(
+                        InactiveAccountException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request),
+                                HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        @ExceptionHandler(InvalidDrCrValueException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidDrCrValue(
+                        InvalidDrCrValueException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request),
+                                HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        @ExceptionHandler(IncompatibleAccountTypeException.class)
+        public ResponseEntity<ErrorResponse> handleIncompatibleAccountType(
+                        IncompatibleAccountTypeException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request),
+                                HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        @ExceptionHandler(FASubGroupHasTransactionsException.class)
+        public ResponseEntity<ErrorResponse> handleSubGroupHasTransactions(
+                        FASubGroupHasTransactionsException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request),
+                                HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        // ---Opening Balance Handlers---
+        @ExceptionHandler(OpeningBalanceImbalanceException.class)
+        public ResponseEntity<ErrorResponse> handleOpeningBalanceImbalance(
+                        OpeningBalanceImbalanceException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request),
+                                HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+
+        @ExceptionHandler(OpeningBalanceAlreadyInitializedException.class)
+        public ResponseEntity<ErrorResponse> handleOpeningBalanceAlreadyInitialized(
+                        OpeningBalanceAlreadyInitializedException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
+                                HttpStatus.CONFLICT);
+        }
+
+        // --- PeriodLock Handlers ---
+        @ExceptionHandler(PeriodLockValidationException.class)
+        public ResponseEntity<ErrorResponse> handlePeriodLockValidation(
+                        PeriodLockValidationException ex, HttpServletRequest request) {
+                return new ResponseEntity<>(buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request),
+                                HttpStatus.BAD_REQUEST);
+        }
+
+        @ExceptionHandler(PeriodLockOverlapException.class)
+        public ResponseEntity<ErrorResponse> handlePeriodLockOverlap(
+                        PeriodLockOverlapException ex, HttpServletRequest request) {
                 return new ResponseEntity<>(buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request),
                                 HttpStatus.CONFLICT);
         }

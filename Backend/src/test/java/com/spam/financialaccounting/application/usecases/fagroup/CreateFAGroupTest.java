@@ -94,7 +94,7 @@ public class CreateFAGroupTest {
 
         assertThatThrownBy(() -> createFAGroup.execute(validGroup))
                 .isInstanceOf(FAGroupAlreadyExistsException.class)
-                .hasMessageContaining("FA Group already exists with code: 01");
+                .hasMessageContaining("An account group with code '01' already exists. Please choose a different code.");
 
         verify(faGroupRepository, never()).save(any());
     }

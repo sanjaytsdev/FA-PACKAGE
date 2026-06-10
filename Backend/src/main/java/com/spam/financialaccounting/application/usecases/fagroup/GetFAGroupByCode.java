@@ -16,6 +16,6 @@ public class GetFAGroupByCode {
     }
 
     public FAGroup execute(String code) {
-        return repository.findByCode(code).orElseThrow(()->new FAGroupNotFoundException("FAGroup not found with code: "+code));
+        return repository.findByCode(code).orElseThrow(()->new FAGroupNotFoundException("No account group found with code '"+code+"'."));
     }
 }

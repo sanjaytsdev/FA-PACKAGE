@@ -15,6 +15,8 @@ export const GroupsView: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'warn'; title: string; message: string } | null>(null);
+  // Per-field validation messages, shown under each input.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadGroups = async () => {
     try {
@@ -51,6 +53,7 @@ export const GroupsView: React.FC = () => {
     setDescription('');
     setType('');
     setBalance('0.00');
+    setFieldErrors({});
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -58,27 +61,19 @@ export const GroupsView: React.FC = () => {
 
     const trimmedCode = code.trim();
     const trimmedDesc = description.trim();
-    
-    if (trimmedCode.length !== 2) {
-      triggerAlert('warn', 'Validation Error', 'Group Code must be exactly 2 characters long.');
-      return;
-    }
-
-    if (!trimmedDesc) {
-      triggerAlert('warn', 'Validation Error', 'Please enter a valid description.');
-      return;
-    }
-
-    if (!type) {
-      triggerAlert('warn', 'Validation Error', 'Please choose a Group Class type.');
-      return;
-    }
-
     const numBal = Number(balance);
-    if (isNaN(numBal)) {
-      triggerAlert('warn', 'Validation Error', 'Please enter a valid numeric aggregated balance.');
+
+    const errors: Record<string, string> = {};
+    if (trimmedCode.length !== 2) errors.code = 'Group Code must be exactly 2 characters long.';
+    if (!trimmedDesc) errors.description = 'Please enter a valid description.';
+    if (!type) errors.type = 'Please choose a Group Class type.';
+    if (isNaN(numBal)) errors.balance = 'Please enter a valid numeric aggregated balance.';
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     const groupPayload: FAGroup = {
       accountCode: trimmedCode,
@@ -217,8 +212,9 @@ export const GroupsView: React.FC = () => {
                 placeholder="e.g. 01 (Exactly 2 Chars)"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 disabled:opacity-50 transition-colors placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${fieldErrors.code ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 disabled:opacity-50 transition-colors placeholder-slate-600`}
               />
+              {fieldErrors.code && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.code}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -228,8 +224,9 @@ export const GroupsView: React.FC = () => {
                 placeholder="e.g. Current Assets"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${fieldErrors.description ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors placeholder-slate-600`}
               />
+              {fieldErrors.description && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.description}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -237,7 +234,7 @@ export const GroupsView: React.FC = () => {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors"
+                className={`w-full bg-slate-950 border ${fieldErrors.type ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors`}
               >
                 <option value="">Select Group Class</option>
                 <option value="0">0 - Asset</option>
@@ -246,6 +243,7 @@ export const GroupsView: React.FC = () => {
                 <option value="3">3 - Income</option>
                 <option value="4">4 - Expense</option>
               </select>
+              {fieldErrors.type && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.type}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -255,8 +253,9 @@ export const GroupsView: React.FC = () => {
                 placeholder="0.00"
                 value={balance}
                 onChange={(e) => setBalance(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-mono font-semibold text-slate-200 transition-colors placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${fieldErrors.balance ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-mono font-semibold text-slate-200 transition-colors placeholder-slate-600`}
               />
+              {fieldErrors.balance && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.balance}</p>}
             </div>
 
             <div className="space-y-2 pt-2">

@@ -21,7 +21,7 @@ public class JournalDetailDTO {
     private String jCode;
 
     @NotBlank(message = "Debit/Credit indicator is required")
-    @Pattern(regexp = "^(DR|CR)$", message = "Debit/Credit indicator must be either 'DR' or 'CR'")
+    @Pattern(regexp = "^(?i)(DR|CR)$", message = "Debit/Credit indicator must be either 'DR' or 'CR'")
     private String jDrCr;
 
     @NotNull(message = "Amount is required")

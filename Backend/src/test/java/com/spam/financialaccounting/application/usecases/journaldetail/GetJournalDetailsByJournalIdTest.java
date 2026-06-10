@@ -23,7 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
 import com.spam.financialaccounting.domain.repository.JournalMasterRepository;
-import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 public class GetJournalDetailsByJournalIdTest {
@@ -72,14 +72,14 @@ public class GetJournalDetailsByJournalIdTest {
     }
 
     @Test
-    @DisplayName("Should throw ValidationException when journal voucher ID does not exist")
+    @DisplayName("Should throw NotFoundException when journal voucher ID does not exist")
     void shouldThrow_WhenJournalMasterNotFound() {
         // ARRANGE
         when(journalMasterRepository.existsById("V999")).thenReturn(false);
 
         // ACT + ASSERT
         assertThatThrownBy(() -> getJournalDetailsByJournalId.execute("V999"))
-                .isInstanceOf(JournalDetailValidationException.class)
+                .isInstanceOf(JournalMasterNotFoundException.class)
                 .hasMessageContaining("Journal voucher with ID V999 does not exist");
 
         // Repository query must not be called if journal voucher doesn't exist
@@ -92,7 +92,7 @@ public class GetJournalDetailsByJournalIdTest {
         when(journalMasterRepository.existsById("V999")).thenReturn(false);
 
         assertThatThrownBy(() -> getJournalDetailsByJournalId.execute("V999"))
-                .isInstanceOf(JournalDetailValidationException.class);
+                .isInstanceOf(JournalMasterNotFoundException.class);
 
         verify(journalMasterRepository, times(1)).existsById("V999");
         verify(journalDetailRepository, never()).findByJournalId(any());

@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -23,9 +25,12 @@ import com.spam.financialaccounting.domain.entity.FAGroup;
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.domain.repository.FAGroupRepository;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
+import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
 import com.spam.financialaccounting.presentation.exception.fagroup.FAGroupNotFoundException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupHasTransactionsException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupValidationException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.InvalidNormalBalanceException;
 
 @ExtendWith(MockitoExtension.class)
 public class UpdateFASubGroupTest {
@@ -35,6 +40,9 @@ public class UpdateFASubGroupTest {
 
     @Mock
     private FAGroupRepository groupRepository;
+
+    @Mock
+    private JournalDetailRepository journalDetailRepository;
 
     @InjectMocks
     private UpdateFASubGroup updateFASubGroup;
@@ -108,7 +116,7 @@ public class UpdateFASubGroupTest {
         // ACT & ASSERT
         assertThatThrownBy(() -> updateFASubGroup.execute(badCodeSubGroup))
                 .isInstanceOf(FASubGroupValidationException.class)
-                .hasMessageContaining("sCode must be 5 characters.");
+                .hasMessageContaining("Ledger account code must be exactly 5 characters.");
     }
 
     @Test
@@ -151,7 +159,7 @@ public class UpdateFASubGroupTest {
         // ACT & ASSERT
         assertThatThrownBy(() -> updateFASubGroup.execute(invalidDrCrSubGroup))
                 .isInstanceOf(FASubGroupValidationException.class)
-                .hasMessageContaining("S_DRCR must be either 'DR' or 'CR'");
+                .hasMessageContaining("Normal balance side must be either 'DR' or 'CR'");
     }
 
     @Test
@@ -181,7 +189,7 @@ public class UpdateFASubGroupTest {
         // ACT & ASSERT
         assertThatThrownBy(() -> updateFASubGroup.execute(invalidFlagSubGroup))
                 .isInstanceOf(FASubGroupValidationException.class)
-                .hasMessageContaining("S_FLAG must be either 'T'(active) or 'F'(inactive)");
+                .hasMessageContaining("Status must be either 'T' (active) or 'F' (inactive)");
     }
 
     @Test
@@ -230,5 +238,147 @@ public class UpdateFASubGroupTest {
 
         // ASSERT
         assertThat(result.getSFlag()).isEqualTo("T");
+    }
+
+    // --- Immutability guard: critical fields locked once transactions exist ---
+
+    @Test
+    @DisplayName("Should allow changing a critical field when the account has NO journal transactions")
+    void shouldAllowCriticalFieldChange_WhenNoTransactions() {
+        // ARRANGE: reclassify account type 00 -> 01 while no postings exist
+        FASubGroup reclassified = new FASubGroup("10001", "Cash", "01", "01", new BigDecimal("1000.00"), "DR", "T");
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(existingSubGroup));
+        when(groupRepository.findByCode("01")).thenReturn(Optional.of(parentGroup));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(false);
+        when(subGroupRepository.update(reclassified)).thenReturn(reclassified);
+
+        // ACT
+        FASubGroup result = updateFASubGroup.execute(reclassified);
+
+        // ASSERT
+        assertThat(result.getSType()).isEqualTo("01");
+        verify(subGroupRepository, times(1)).update(reclassified);
+    }
+
+    @Test
+    @DisplayName("Should allow editing description even when the account has journal transactions")
+    void shouldAllowDescriptionChange_WhenTransactionsExist() {
+        // ARRANGE: only the (non-critical) description changes, all critical fields untouched
+        FASubGroup renamed = new FASubGroup("10001", "Cash in Hand", "01", "00", new BigDecimal("1000.00"), "DR", "T");
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(existingSubGroup));
+        when(groupRepository.findByCode("01")).thenReturn(Optional.of(parentGroup));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(true);
+        when(subGroupRepository.update(renamed)).thenReturn(renamed);
+
+        // ACT
+        FASubGroup result = updateFASubGroup.execute(renamed);
+
+        // ASSERT
+        assertThat(result.getSDesc()).isEqualTo("Cash in Hand");
+        verify(subGroupRepository, times(1)).update(renamed);
+    }
+
+    @Test
+    @DisplayName("Should block changing a critical field (S_TYPE) when journal transactions exist")
+    void shouldBlock_WhenCriticalFieldChangedAndTransactionsExist() {
+        // ARRANGE: attempt to reclassify account type after postings exist
+        FASubGroup reclassified = new FASubGroup("10001", "Cash", "01", "01", new BigDecimal("1000.00"), "DR", "T");
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(existingSubGroup));
+        when(groupRepository.findByCode("01")).thenReturn(Optional.of(parentGroup));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(true);
+
+        // ACT & ASSERT
+        assertThatThrownBy(() -> updateFASubGroup.execute(reclassified))
+                .isInstanceOf(FASubGroupHasTransactionsException.class)
+                .hasMessageContaining("account type")
+                .hasMessageContaining("journal transactions already exist");
+
+        verify(subGroupRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("Should block changing normal balance side (S_DRCR) after postings exist")
+    void shouldBlock_WhenDrCrChangedAfterPosting() {
+        // ARRANGE: flip DR -> CR after the account has been posted to
+        FASubGroup flippedDrCr = new FASubGroup("10001", "Cash", "01", "00", new BigDecimal("1000.00"), "CR", "T");
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(existingSubGroup));
+        when(groupRepository.findByCode("01")).thenReturn(Optional.of(parentGroup));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(true);
+
+        // ACT & ASSERT
+        assertThatThrownBy(() -> updateFASubGroup.execute(flippedDrCr))
+                .isInstanceOf(FASubGroupHasTransactionsException.class)
+                .hasMessageContaining("normal balance side");
+
+        verify(subGroupRepository, never()).update(any());
+    }
+
+    @Test
+    @DisplayName("Should block changing opening balance (S_OPBAL) after postings exist")
+    void shouldBlock_WhenOpeningBalanceChangedAfterPosting() {
+        // ARRANGE: existing opening balance is 1000.00, attempt to change it to 5000.00
+        FASubGroup changedOpbal = new FASubGroup("10001", "Cash", "01", "00", new BigDecimal("5000.00"), "DR", "T");
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(existingSubGroup));
+        when(groupRepository.findByCode("01")).thenReturn(Optional.of(parentGroup));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(true);
+
+        // ACT & ASSERT
+        assertThatThrownBy(() -> updateFASubGroup.execute(changedOpbal))
+                .isInstanceOf(FASubGroupHasTransactionsException.class)
+                .hasMessageContaining("opening balance");
+
+        verify(subGroupRepository, never()).update(any());
+    }
+
+    // --- Natural balance side enforcement (Asset/Expense => DR, Liability/Equity/Revenue => CR) ---
+
+    @ParameterizedTest(name = "A_TYPE {0} ({1}) accepts its natural balance {3}")
+    @CsvSource({
+            "0, Asset, 00, DR",
+            "4, Expense, 40, DR",
+            "1, Liability, 10, CR",
+            "2, Equity, 20, CR",
+            "3, Revenue, 30, CR"
+    })
+    @DisplayName("Should update account when S_DRCR matches the category's natural balance")
+    void shouldUpdate_WhenNormalBalanceMatchesCategory(String aType, String name, String sType, String drCr) {
+        String aCode = "0" + aType;
+        FAGroup parent = new FAGroup(aCode, name, aType, BigDecimal.ZERO);
+        FASubGroup existing = new FASubGroup("10001", name, aCode, sType, BigDecimal.ZERO, drCr, "T");
+        FASubGroup updated = new FASubGroup("10001", name + " Updated", aCode, sType, BigDecimal.ZERO, drCr, "T");
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(existing));
+        when(groupRepository.findByCode(aCode)).thenReturn(Optional.of(parent));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(false);
+        when(subGroupRepository.update(updated)).thenReturn(updated);
+
+        FASubGroup result = updateFASubGroup.execute(updated);
+
+        assertThat(result.getSDrCr()).isEqualTo(drCr);
+        verify(subGroupRepository, times(1)).update(updated);
+    }
+
+    @ParameterizedTest(name = "A_TYPE {0} ({1}) rejects wrong balance {3} (no postings)")
+    @CsvSource({
+            "0, Asset, 00, CR",
+            "4, Expense, 40, CR",
+            "1, Liability, 10, DR",
+            "2, Equity, 20, DR",
+            "3, Revenue, 30, DR"
+    })
+    @DisplayName("Should reject update when S_DRCR violates the category's natural balance")
+    void shouldThrow_WhenUpdateViolatesNormalBalance(String aType, String name, String sType, String drCr) {
+        String aCode = "0" + aType;
+        FAGroup parent = new FAGroup(aCode, name, aType, BigDecimal.ZERO);
+        FASubGroup existing = new FASubGroup("10001", name, aCode, sType, BigDecimal.ZERO, drCr, "T");
+        FASubGroup updated = new FASubGroup("10001", name, aCode, sType, BigDecimal.ZERO, drCr, "T");
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(existing));
+        when(groupRepository.findByCode(aCode)).thenReturn(Optional.of(parent));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(false);
+
+        assertThatThrownBy(() -> updateFASubGroup.execute(updated))
+                .isInstanceOf(InvalidNormalBalanceException.class)
+                .hasMessageContaining(name);
+
+        verify(subGroupRepository, never()).update(any());
     }
 }

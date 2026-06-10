@@ -20,12 +20,12 @@ public class DeleteJournalMaster {
     }
 
     public boolean execute(String jId) {
-        // Verify journal exists
+        // make sure the journal exists
         if (!journalMasterRepository.existsById(jId)) {
             throw new JournalMasterNotFoundException("Journal voucher with ID " + jId + " not found");
         }
 
-        // check for existing journal details (refrential integrity)
+        // check for existing journal details (referential integrity)
         var existingDetails = journalDetailRepository.findByJournalId(jId);
         if (!existingDetails.isEmpty()) {
             throw new JournalMasterValidationException(

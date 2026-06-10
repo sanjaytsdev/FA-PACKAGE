@@ -19,6 +19,8 @@ export const LedgersView: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'warn'; title: string; message: string } | null>(null);
+  // Per-field validation messages, shown under each input.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const loadData = async () => {
     try {
@@ -65,6 +67,7 @@ export const LedgersView: React.FC = () => {
     setOpBalance('0.00');
     setDrCr('');
     setStatus('Active');
+    setFieldErrors({});
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -73,37 +76,21 @@ export const LedgersView: React.FC = () => {
     const trimmedCode = code.trim();
     const trimmedDesc = description.trim();
     const trimmedSubType = subType.trim();
-
-    if (trimmedCode.length !== 5) {
-      triggerAlert('warn', 'Validation Error', 'Ledger Code must be exactly 5 characters.');
-      return;
-    }
-
-    if (!trimmedDesc) {
-      triggerAlert('warn', 'Validation Error', 'Please enter an account description.');
-      return;
-    }
-
-    if (!parentGroupCode) {
-      triggerAlert('warn', 'Validation Error', 'Please choose a parent account group.');
-      return;
-    }
-
-    if (trimmedSubType.length !== 2) {
-      triggerAlert('warn', 'Validation Error', 'Sub-Type must be exactly 2 characters (e.g. 00).');
-      return;
-    }
-
     const numBal = Number(opBalance);
-    if (isNaN(numBal)) {
-      triggerAlert('warn', 'Validation Error', 'Please enter a valid numeric opening balance.');
-      return;
-    }
 
-    if (!drCr) {
-      triggerAlert('warn', 'Validation Error', 'Please select DR or CR balance side.');
+    const errors: Record<string, string> = {};
+    if (trimmedCode.length !== 5) errors.code = 'Ledger Code must be exactly 5 characters.';
+    if (!trimmedDesc) errors.description = 'Please enter an account description.';
+    if (!parentGroupCode) errors.parentGroupCode = 'Please choose a parent account group.';
+    if (trimmedSubType.length !== 2) errors.subType = 'Sub-Type must be exactly 2 characters (e.g. 00).';
+    if (isNaN(numBal)) errors.opBalance = 'Please enter a valid numeric opening balance.';
+    if (!drCr) errors.drCr = 'Please select DR or CR balance side.';
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     const payload: FASubGroup = {
       sCode: trimmedCode,
@@ -111,7 +98,7 @@ export const LedgersView: React.FC = () => {
       aCode: parentGroupCode,
       sType: trimmedSubType,
       sOpbal: numBal,
-      sDrCr: drCr,
+      sDrCr: drCr as 'DR' | 'CR', // checked non-empty above
       sFlag: status === 'Active' ? 'T' : 'F',
     };
 
@@ -267,8 +254,9 @@ export const LedgersView: React.FC = () => {
                 placeholder="5 digits (e.g. 10001)"
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 disabled:opacity-50 transition-colors placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${fieldErrors.code ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 disabled:opacity-50 transition-colors placeholder-slate-600`}
               />
+              {fieldErrors.code && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.code}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -278,8 +266,9 @@ export const LedgersView: React.FC = () => {
                 placeholder="e.g. Cash at Bank"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${fieldErrors.description ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors placeholder-slate-600`}
               />
+              {fieldErrors.description && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.description}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -289,7 +278,7 @@ export const LedgersView: React.FC = () => {
                 onChange={(e) => {
                   const newCode = e.target.value;
                   setParentGroupCode(newCode);
-                  // Auto-fill sub-type and normal side when creating (not editing)
+                  // Auto-fill sub-type and normal side on create, not on edit
                   if (!selectedLedger) {
                     const group = groups.find((g) => g.accountCode === newCode);
                     if (group) {
@@ -298,7 +287,7 @@ export const LedgersView: React.FC = () => {
                     }
                   }
                 }}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors"
+                className={`w-full bg-slate-950 border ${fieldErrors.parentGroupCode ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors`}
               >
                 <option value="">Select Parent Group</option>
                 {groups.map((g) => (
@@ -307,6 +296,7 @@ export const LedgersView: React.FC = () => {
                   </option>
                 ))}
               </select>
+              {fieldErrors.parentGroupCode && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.parentGroupCode}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -317,8 +307,9 @@ export const LedgersView: React.FC = () => {
                 placeholder="2-digit classification (e.g. 00)"
                 value={subType}
                 onChange={(e) => setSubType(e.target.value.replace(/\D/g, ''))}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${fieldErrors.subType ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors placeholder-slate-600`}
               />
+              {fieldErrors.subType && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.subType}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -328,8 +319,9 @@ export const LedgersView: React.FC = () => {
                 placeholder="0.00"
                 value={opBalance}
                 onChange={(e) => setOpBalance(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-mono font-semibold text-slate-200 transition-colors placeholder-slate-600"
+                className={`w-full bg-slate-950 border ${fieldErrors.opBalance ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-mono font-semibold text-slate-200 transition-colors placeholder-slate-600`}
               />
+              {fieldErrors.opBalance && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.opBalance}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -338,12 +330,13 @@ export const LedgersView: React.FC = () => {
                 <select
                   value={drCr}
                   onChange={(e) => setDrCr(e.target.value as 'DR' | 'CR')}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors"
+                  className={`w-full bg-slate-950 border ${fieldErrors.drCr ? 'border-rose-500' : 'border-slate-800'} focus:border-indigo-500 rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-200 transition-colors`}
                 >
                   <option value="">DR / CR</option>
                   <option value="DR">Debit (DR)</option>
                   <option value="CR">Credit (CR)</option>
                 </select>
+                {fieldErrors.drCr && <p className="text-2xs font-semibold text-rose-400 mt-1">{fieldErrors.drCr}</p>}
               </div>
 
               <div className="space-y-1.5">

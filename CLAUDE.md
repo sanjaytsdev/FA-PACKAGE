@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FA-PACKAGE is a Financial Accounting application built with Spring Boot 4.0.3 (Java 17). It implements double-entry bookkeeping with Account Groups, Ledger Accounts (SubGroups), and Journal Vouchers.
+FA-PACKAGE is a Financial Accounting application built with Spring Boot 3.3.5 (Java 17). It implements double-entry bookkeeping with Account Groups, Ledger Accounts (SubGroups), and Journal Vouchers.
 
 ## Build and Run Commands
 
@@ -14,7 +14,7 @@ cd Backend
 ./mvnw spring-boot:run
 ```
 
-### Using Docker (PostgreSQL)
+### Using Docker (MySQL)
 ```bash
 docker-compose up --build
 ```
@@ -66,9 +66,9 @@ The application uses **plain JDBC** (NOT JPA/Hibernate) for database access.
 - Database file: `Backend/sqlite/FA.db`
 - Schema auto-loaded from `Backend/src/main/resources/schema.sql` on startup
 
-### PostgreSQL (Docker)
-- Uses environment variables from `docker-compose.yml`
-- Init script at `docker/postgres/init.sql` (note: may not match current schema.sql)
+### MySQL (Docker / Production)
+- Runs as the `mysql:8.0` service defined in `docker-compose.yml` (credentials via environment variables)
+- Schema auto-loaded from `Backend/src/main/resources/schema-mysql.sql` on startup (the `docker` and `prod` profiles use the MySQL driver)
 
 ## Database Schema
 

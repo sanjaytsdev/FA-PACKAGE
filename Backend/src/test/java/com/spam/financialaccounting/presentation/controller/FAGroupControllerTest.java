@@ -78,12 +78,12 @@ public class FAGroupControllerTest {
         void getByCode_ShouldReturn404_WhenNotFound() throws Exception {
                 // ARRANGE — mock throws the exception
                 when(getFAGroupByCode.execute("99"))
-                                .thenThrow(new FAGroupNotFoundException("FAGroup not found with code: 99"));
+                                .thenThrow(new FAGroupNotFoundException("No account group found with code '99'."));
                 // ACT + ASSERT
                 mockMvc.perform(get("/api/v1/fagroups/99"))
                                 .andExpect(status().isNotFound()) // HTTP 404
                                 .andExpect(jsonPath("$.status").value(404))
-                                .andExpect(jsonPath("$.message").value("FAGroup not found with code: 99"));
+                                .andExpect(jsonPath("$.message").value("No account group found with code '99'."));
         }
 
         // GET /api/v1/fagroups
@@ -132,13 +132,13 @@ public class FAGroupControllerTest {
         void create_ShouldReturn409_WhenAlreadyExists() throws Exception {
                 // ARRANGE — use case throws AlreadyExistsException
                 when(createFAGroup.execute(any(FAGroup.class)))
-                                .thenThrow(new FAGroupAlreadyExistsException("FA Group already exists with code: 01"));
+                                .thenThrow(new FAGroupAlreadyExistsException("An account group with code '01' already exists. Please choose a different code."));
                 mockMvc.perform(post("/api/v1/fagroups")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(sampleDTO)))
                                 .andExpect(status().isConflict()) // HTTP 409
                                 .andExpect(jsonPath("$.status").value(409))
-                                .andExpect(jsonPath("$.message").value("FA Group already exists with code: 01"));
+                                .andExpect(jsonPath("$.message").value("An account group with code '01' already exists. Please choose a different code."));
         }
 
         @Test
@@ -222,10 +222,10 @@ public class FAGroupControllerTest {
         @DisplayName("GET /{code}/subgroups → 404 Not Found when group code does not exist")
         void getWithSubGroups_ShouldReturn404_WhenNotFound() throws Exception {
                 when(getFAGroupWithSubGroups.execute("99"))
-                                .thenThrow(new FAGroupNotFoundException("Group not found with code: 99"));
+                                .thenThrow(new FAGroupNotFoundException("No account group found with code '99'."));
                 mockMvc.perform(get("/api/v1/fagroups/99/subgroups"))
                                 .andExpect(status().isNotFound())
-                                .andExpect(jsonPath("$.message").value("Group not found with code: 99"));
+                                .andExpect(jsonPath("$.message").value("No account group found with code '99'."));
         }
 
 }

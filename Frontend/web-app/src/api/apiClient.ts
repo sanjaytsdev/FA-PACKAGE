@@ -1,8 +1,20 @@
-import type { FAGroup, FASubGroup, JournalDetail, JournalMaster } from "../types";
+import type {
+  BalanceSheet,
+  FAGroup,
+  FASubGroup,
+  JournalDetail,
+  JournalMaster,
+  JournalVoucherRequest,
+  OpeningBalanceImportRequest,
+  PeriodLock,
+  PeriodLockRequest,
+  ProfitAndLoss,
+  TrialBalance,
+} from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1";
 
-/** Default timeout for all API calls (8 seconds) */
+/** Timeout for API calls (8 seconds) */
 const DEFAULT_TIMEOUT_MS = 8000;
 
 function makeSignal(): AbortSignal {
@@ -16,7 +28,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
       const data = await response.json();
       errMsg = data.message || data.error || errMsg;
     } catch {
-      // Ignored — response body may not be JSON
+      // body might not be JSON, ignore
     }
     throw new Error(errMsg);
   }
@@ -116,34 +128,14 @@ export const apiClient = {
     );
   },
 
-  //  Journal Masters 
+  //  Journal Masters (read-only; writes go through Journal Vouchers)
   async getJournalMasters(): Promise<JournalMaster[]> {
     return handleResponse<JournalMaster[]>(
       await fetch(`${BASE_URL}/journal-masters`, { signal: makeSignal() }),
     );
   },
 
-  async createJournalMaster(master: JournalMaster): Promise<JournalMaster> {
-    return handleResponse<JournalMaster>(
-      await fetch(`${BASE_URL}/journal-masters`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(master),
-        signal: makeSignal(),
-      }),
-    );
-  },
-
-  async deleteJournalMaster(jId: string): Promise<void> {
-    return handleResponse<void>(
-      await fetch(`${BASE_URL}/journal-masters/${jId}`, {
-        method: "DELETE",
-        signal: makeSignal(),
-      }),
-    );
-  },
-
-  // Journal Details 
+  // Journal Details (read-only; writes go through Journal Vouchers)
   async getJournalDetails(jId: string): Promise<JournalDetail[]> {
     return handleResponse<JournalDetail[]>(
       await fetch(`${BASE_URL}/journal-details/journal/${jId}`, {
@@ -152,27 +144,101 @@ export const apiClient = {
     );
   },
 
-  async createJournalDetail(detail: JournalDetail): Promise<JournalDetail> {
-    return handleResponse<JournalDetail>(
-      await fetch(`${BASE_URL}/journal-details`, {
+  //  Journal Vouchers (balanced, atomic post/reverse/delete)
+  async postJournalVoucher(
+    voucher: JournalVoucherRequest,
+  ): Promise<JournalMaster> {
+    return handleResponse<JournalMaster>(
+      await fetch(`${BASE_URL}/journal-vouchers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(detail),
+        body: JSON.stringify(voucher),
         signal: makeSignal(),
       }),
     );
   },
 
-  async deleteJournalDetail(
-    jId: string,
-    jCode: string,
-    jDrCr: string,
-  ): Promise<void> {
+  async deleteJournalVoucher(jId: string): Promise<void> {
     return handleResponse<void>(
-      await fetch(`${BASE_URL}/journal-details/${jId}/${jCode}/${jDrCr}`, {
+      await fetch(`${BASE_URL}/journal-vouchers/${jId}`, {
         method: "DELETE",
         signal: makeSignal(),
       }),
+    );
+  },
+
+  // Posts a reversing voucher that cancels the given one and returns the new reversal header.
+  async reverseJournalVoucher(jId: string): Promise<JournalMaster> {
+    return handleResponse<JournalMaster>(
+      await fetch(`${BASE_URL}/journal-vouchers/${jId}/reverse`, {
+        method: "POST",
+        signal: makeSignal(),
+      }),
+    );
+  },
+
+  //  Opening Balances (imported as one atomic Opening Balance voucher)
+  async importOpeningBalances(
+    request: OpeningBalanceImportRequest,
+  ): Promise<JournalMaster> {
+    return handleResponse<JournalMaster>(
+      await fetch(`${BASE_URL}/opening-balances/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        signal: makeSignal(),
+      }),
+    );
+  },
+
+  //  Period Locks (closed accounting periods)
+  async getPeriodLocks(): Promise<PeriodLock[]> {
+    return handleResponse<PeriodLock[]>(
+      await fetch(`${BASE_URL}/period-locks`, { signal: makeSignal() }),
+    );
+  },
+
+  async createPeriodLock(request: PeriodLockRequest): Promise<PeriodLock> {
+    return handleResponse<PeriodLock>(
+      await fetch(`${BASE_URL}/period-locks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+        signal: makeSignal(),
+      }),
+    );
+  },
+
+  async deletePeriodLock(id: number): Promise<void> {
+    return handleResponse<void>(
+      await fetch(`${BASE_URL}/period-locks/${id}`, {
+        method: "DELETE",
+        signal: makeSignal(),
+      }),
+    );
+  },
+
+  //  Reports
+  // asOfDate (ISO yyyy-MM-dd) limits the report to vouchers posted on or before
+  // that date. Leave it off to report as of today.
+  async getTrialBalance(asOfDate?: string): Promise<TrialBalance> {
+    const query = asOfDate ? `?asOfDate=${encodeURIComponent(asOfDate)}` : '';
+    return handleResponse<TrialBalance>(
+      await fetch(`${BASE_URL}/reports/trial-balance${query}`, { signal: makeSignal() }),
+    );
+  },
+
+  async getProfitAndLoss(asOfDate?: string): Promise<ProfitAndLoss> {
+    const query = asOfDate ? `?asOfDate=${encodeURIComponent(asOfDate)}` : '';
+    return handleResponse<ProfitAndLoss>(
+      await fetch(`${BASE_URL}/reports/profit-and-loss${query}`, { signal: makeSignal() }),
+    );
+  },
+
+  async getBalanceSheet(asOfDate?: string): Promise<BalanceSheet> {
+    const query = asOfDate ? `?asOfDate=${encodeURIComponent(asOfDate)}` : '';
+    return handleResponse<BalanceSheet>(
+      await fetch(`${BASE_URL}/reports/balance-sheet${query}`, { signal: makeSignal() }),
     );
   },
 };

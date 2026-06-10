@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
-import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 
 @Service
@@ -22,9 +22,10 @@ public class GetJournalDetailsByAccountCode {
     }
 
     public List<JournalDetail> execute(String sCode) {
-        // Validate that the ledger account exists
+        // The ledger account in the path has to exist; a missing one is a 404,
+        // same as the other read endpoints.
         if (!faSubGroupRepository.existsByCode(sCode)) {
-            throw new JournalDetailValidationException(
+            throw new FASubGroupNotFoundException(
                     "Ledger account with code " + sCode + " does not exist");
         }
         return journalDetailRepository.findByAccountCode(sCode);

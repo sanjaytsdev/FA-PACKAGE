@@ -33,17 +33,17 @@ public class DesktopApp extends Application {
         rootLayout = new BorderPane();
         rootLayout.getStyleClass().add("root-layout");
 
-        // create UI component
+        // Build the UI pieces
         VBox sidebar = createSidebar();
         HBox topBar = createTopBar();
 
         rootLayout.setLeft(sidebar);
         rootLayout.setTop(topBar);
 
-        // Load Default Dashboard View
+        // Show the dashboard by default
         showDashboard();
 
-        // Scene creation
+        // Set up the scene
         Scene scene = new Scene(rootLayout, 1100, 700);
         UiUtils.applyStylesheet(scene);
 
@@ -51,7 +51,7 @@ public class DesktopApp extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
         
-        // Initial Server Ping
+        // Ping the server once on startup
         checkConnection();
     }
 
@@ -99,9 +99,15 @@ public class DesktopApp extends Application {
         Button dashBtn = createNavButton("📊 Dashboard", () -> showDashboard());
         Button groupBtn = createNavButton("📂 Account Groups", () -> showGroups());
         Button ledgerBtn = createNavButton("💳 Ledger Accounts", () -> showLedgers());
+        Button openingBtn = createNavButton("💰 Opening Balances", () -> showOpeningBalances());
         Button journalBtn = createNavButton("📝 Journal Vouchers", () -> showJournals());
+        Button trialBtn = createNavButton("⚖ Trial Balance", () -> showTrialBalance());
+        Button plBtn = createNavButton("📈 Profit & Loss", () -> showProfitAndLoss());
+        Button bsBtn = createNavButton("📖 Balance Sheet", () -> showBalanceSheet());
+        Button lockBtn = createNavButton("🔒 Period Locks", () -> showPeriodLocks());
 
-        sidebar.getChildren().addAll(brandLabel, dashBtn, groupBtn, ledgerBtn, journalBtn);
+        sidebar.getChildren().addAll(brandLabel, dashBtn, groupBtn, ledgerBtn, openingBtn,
+                journalBtn, trialBtn, plBtn, bsBtn, lockBtn);
         setActiveNav(dashBtn);
         return sidebar;
     }
@@ -152,8 +158,28 @@ public class DesktopApp extends Application {
         rootLayout.setCenter(new FASubGroupsView(apiClient));
     }
 
+    private void showOpeningBalances() {
+        rootLayout.setCenter(new OpeningBalancesView(apiClient));
+    }
+
     private void showJournals() {
         rootLayout.setCenter(new JournalEntriesView(apiClient));
+    }
+
+    private void showTrialBalance() {
+        rootLayout.setCenter(new TrialBalanceView(apiClient));
+    }
+
+    private void showProfitAndLoss() {
+        rootLayout.setCenter(new ProfitAndLossView(apiClient));
+    }
+
+    private void showBalanceSheet() {
+        rootLayout.setCenter(new BalanceSheetView(apiClient));
+    }
+
+    private void showPeriodLocks() {
+        rootLayout.setCenter(new PeriodLocksView(apiClient));
     }
 
 }
