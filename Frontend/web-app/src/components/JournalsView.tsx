@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FileSpreadsheet, PlusCircle, Trash2, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
+import { FileSpreadsheet, PlusCircle, Trash2, Undo2, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { apiClient } from '../api/apiClient';
 import type { JournalMaster, JournalDetail } from '../types';
 import { NewVoucherModal } from './NewVoucherModal';
@@ -20,11 +20,11 @@ export const JournalsView: React.FC = () => {
       const data = await apiClient.getJournalMasters();
       setVouchers(data);
       if (selectedVoucher) {
-        // Refresh active selection details
+        // Refresh the details for whatever's selected
         const refreshedSelected = data.find(v => v.jId === selectedVoucher.jId);
         if (refreshedSelected) {
           setSelectedVoucher(refreshedSelected);
-          await loadDetails(refreshedSelected.jId);
+          await loadDetails(refreshedSelected.jId!);
         } else {
           setSelectedVoucher(null);
           setDetails([]);
@@ -60,29 +60,21 @@ export const JournalsView: React.FC = () => {
 
   const handleSelectVoucher = async (v: JournalMaster) => {
     setSelectedVoucher(v);
-    await loadDetails(v.jId);
+    await loadDetails(v.jId!);
   };
 
   const handleDelete = async () => {
     if (!selectedVoucher) return;
 
-    if (!window.confirm(`Are you sure you want to delete Voucher ID "${selectedVoucher.jId}" and all its detail lines? Proceeding will run a cascading delete.`)) {
+    if (!window.confirm(`Are you sure you want to delete Voucher ID "${selectedVoucher.jId}" and all its detail lines?`)) {
       return;
     }
 
     try {
       setLoading(true);
-      
-      // 1. Get current details to delete
-      const linesToDelete = await apiClient.getJournalDetails(selectedVoucher.jId);
-      
-      // 2. Delete detail lines sequentially
-      for (const line of linesToDelete) {
-        await apiClient.deleteJournalDetail(line.jId, line.jCode, line.jDrCr);
-      }
-      
-      // 3. Delete Master header
-      await apiClient.deleteJournalMaster(selectedVoucher.jId);
+
+      // Server deletes the header and all its lines in one shot.
+      await apiClient.deleteJournalVoucher(selectedVoucher.jId!);
 
       triggerAlert('success', 'Voucher Deleted', `Voucher ID "${selectedVoucher.jId}" successfully deleted.`);
       setSelectedVoucher(null);
@@ -90,6 +82,28 @@ export const JournalsView: React.FC = () => {
       await loadVouchers();
     } catch (err: any) {
       triggerAlert('error', 'Deletion Failed', err.message || 'Failed to delete journal voucher.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReverse = async () => {
+    if (!selectedVoucher) return;
+
+    if (!window.confirm(`Post a reversing voucher that cancels Voucher ID "${selectedVoucher.jId}"?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Server posts a new balanced voucher with each line's DR/CR flipped.
+      const reversal = await apiClient.reverseJournalVoucher(selectedVoucher.jId!);
+
+      triggerAlert('success', 'Voucher Reversed', `Reversing voucher "${reversal.jId}" posted for "${selectedVoucher.jId}".`);
+      await loadVouchers();
+    } catch (err: any) {
+      triggerAlert('error', 'Reversal Failed', err.message || 'Failed to reverse journal voucher.');
     } finally {
       setLoading(false);
     }
@@ -202,14 +216,24 @@ export const JournalsView: React.FC = () => {
               Voucher Line Register
             </h3>
             {selectedVoucher && (
-              <button
-                onClick={handleDelete}
-                className="text-rose-400 hover:text-rose-300 flex items-center gap-1 text-xs font-bold transition-colors cursor-pointer"
-                title="Delete Entire Voucher"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleReverse}
+                  className="text-amber-400 hover:text-amber-300 flex items-center gap-1 text-xs font-bold transition-colors cursor-pointer"
+                  title="Post a Reversing Voucher"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                  Reverse
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="text-rose-400 hover:text-rose-300 flex items-center gap-1 text-xs font-bold transition-colors cursor-pointer"
+                  title="Delete Entire Voucher"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+              </div>
             )}
           </div>
 

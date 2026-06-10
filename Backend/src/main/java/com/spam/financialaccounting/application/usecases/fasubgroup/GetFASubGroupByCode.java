@@ -18,9 +18,9 @@ public class GetFASubGroupByCode {
 
     public FASubGroup execute(String sCode) {
         if (sCode == null || sCode.trim().isEmpty()) {
-            throw new IllegalArgumentException("sCode cannot be null or empty");
+            throw new IllegalArgumentException("Ledger account code is required.");
         }
-        return repository.findByCode(sCode).orElseThrow(() ->new FASubGroupNotFoundException("FASubGroup not found with code: "+sCode));
+        return repository.findByCode(sCode).orElseThrow(() ->new FASubGroupNotFoundException("No ledger account found with code '"+sCode+"'."));
     }
 
 

@@ -2,6 +2,7 @@ package com.spam.financialaccounting.application.usecases.fasubgroup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
+import com.spam.financialaccounting.infrastructure.persistence.repository.AuditLogRepository;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupValidationException;
 
@@ -32,6 +34,9 @@ public class DeleteFASubGroupTest {
 
     @Mock
     private JournalDetailRepository journalDetailRepository;
+
+    @Mock
+    private AuditLogRepository auditLogRepository;
 
     @InjectMocks
     private DeleteFASubGroup deleteFASubGroup;
@@ -87,5 +92,22 @@ public class DeleteFASubGroupTest {
                 .hasMessageContaining("Cannot delete ledger account with existing journal entries.");
 
         verify(subGroupRepository, never()).delete("10001");
+    }
+
+    @Test
+    @DisplayName("Should NOT write an audit entry when the delete removes no rows")
+    void shouldNotAudit_WhenDeleteAffectsNoRows() {
+        // ARRANGE: the row passes the existence/journal checks but a concurrent
+        // delete removes it first, so delete() reports zero rows affected.
+        when(subGroupRepository.findByCode("10001")).thenReturn(Optional.of(sampleSubGroup));
+        when(journalDetailRepository.existsByAccountCode("10001")).thenReturn(false);
+        when(subGroupRepository.delete("10001")).thenReturn(false);
+
+        // ACT
+        boolean result = deleteFASubGroup.execute("10001");
+
+        // ASSERT: returns false and records nothing in the audit trail.
+        assertThat(result).isFalse();
+        verify(auditLogRepository, never()).append(any(), any(), any(), any(), any());
     }
 }

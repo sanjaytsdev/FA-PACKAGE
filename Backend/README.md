@@ -296,6 +296,52 @@ Let's trace how a request flows through the architecture:
 - **API Documentation:** SpringDoc OpenAPI (Swagger)
 - **Data Access:** Spring JDBC (JdbcTemplate)
 
+## 🔐 Referential Integrity (SQLite Foreign Key Enforcement)
+
+Double-entry bookkeeping is only safe if journal lines can never reference a
+non-existent voucher or ledger account. Those rules are declared as **foreign
+key constraints** in `src/main/resources/schema.sql`:
+
+| Constraint | Guarantees |
+|---|---|
+| `FASubGroup.A_CODE → FAGroup.A_CODE` | A ledger account must belong to a real account group |
+| `JournalDetail.J_ID → JournalMaster.J_ID` | A journal line must belong to a real voucher |
+| `JournalDetail.J_CODE → FASubGroup.S_CODE` | A journal line must post to a real ledger account |
+| `JournalMaster.REVERSES / REVERSED_BY → JournalMaster.J_ID` | A reversal must point at a real voucher |
+
+### Why this needs configuration
+
+**SQLite disables foreign key enforcement *per connection* by default.** The
+constraints above exist in the schema but are silently ignored unless every
+connection issues `PRAGMA foreign_keys = ON`. (MySQL — used by the `docker`/`prod`
+profiles — enforces foreign keys natively, so this concerns the SQLite `dev`
+profile only.)
+
+### How it is enforced here
+
+1. **Every connection enables it.** `application-dev.properties` sets:
+   ```properties
+   spring.datasource.hikari.connection-init-sql=PRAGMA foreign_keys=ON
+   ```
+   HikariCP runs this statement on every physical connection it opens, so the
+   pragma is active on every connection handed out from the pool.
+
+2. **Startup is guarded.** `ForeignKeyEnforcementValidator` runs on
+   `ApplicationReadyEvent`, queries `PRAGMA foreign_keys`, and **aborts boot**
+   with an `IllegalStateException` if enforcement is not active — so a
+   misconfiguration fails fast and loudly instead of silently corrupting data.
+   The check is skipped for non-SQLite datasources.
+
+### Behaviour
+
+With enforcement active, any insert/update that references a missing parent row
+is rejected at the database level with a `FOREIGN KEY constraint failed` error.
+This is proven end-to-end by `SqliteForeignKeyEnforcementTest`, which runs
+against a real in-memory SQLite database (not H2, which enforces FKs
+unconditionally and would prove nothing) and verifies that invalid
+JournalMaster, account, and reversal references are all rejected — and, as a
+control, that the same invalid insert *succeeds* when the pragma is OFF.
+
 ## 🚀 Getting Started
 
 ### Prerequisites

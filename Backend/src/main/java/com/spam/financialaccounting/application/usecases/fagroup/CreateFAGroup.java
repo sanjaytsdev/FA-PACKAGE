@@ -31,7 +31,8 @@ public class CreateFAGroup {
 
         // 2. Uniqueness Check
         if (faGroupRepository.existsByCode(faGroup.getAccountCode())) {
-            throw new FAGroupAlreadyExistsException("FA Group already exists with code: " + faGroup.getAccountCode());
+            throw new FAGroupAlreadyExistsException(
+                    "An account group with code '" + faGroup.getAccountCode() + "' already exists. Please choose a different code.");
         }
 
         // 3. Description Validation
@@ -48,7 +49,7 @@ public class CreateFAGroup {
             throw new FAGroupValidationException("Account Type cannot be null");
         }
 
-        // Define allowed types (0=Asset, 1=Liability, 2=Equity, 3=Income, 4=Expense)
+        // Allowed types (0=Asset, 1=Liability, 2=Equity, 3=Income, 4=Expense)
         List<String> allowedTypes = Arrays.asList("0", "1", "2", "3", "4");
         if (!allowedTypes.contains(faGroup.getAccountType())) {
             throw new FAGroupValidationException("Invalid Account Type. Allowed values are: " + allowedTypes);

@@ -1,13 +1,11 @@
 package com.spam.financialaccounting.application.usecases.journalmaster;
 
-import java.math.BigDecimal;
-
 import org.springframework.stereotype.Service;
 
 import com.spam.financialaccounting.domain.entity.JournalMaster;
 import com.spam.financialaccounting.domain.repository.JournalMasterRepository;
 import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
-import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterValidationException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalVoucherPostedException;
 
 @Service
 public class UpdateJournalMaster {
@@ -19,27 +17,17 @@ public class UpdateJournalMaster {
     }
 
     public JournalMaster execute(JournalMaster journalMaster) {
-        // verify journal exists
-        if (!journalMasterRepository.existsById(journalMaster.getJId())) {
+        String jId = journalMaster.getJId();
+
+        // make sure the journal exists
+        if (!journalMasterRepository.existsById(jId)) {
             throw new JournalMasterNotFoundException(
-                    "Journal voucher with ID " + journalMaster.getJId() + " not found");
+                    "Journal voucher with ID " + jId + " not found");
         }
 
-        // Validate document type
-        if (journalMaster.getJDoc() != null && journalMaster.getJDoc().length() != 2) {
-            throw new JournalMasterValidationException("Document type must be exactly 2 characters");
-        }
-
-        // Validate amount is non-negative
-        if (journalMaster.getJAmount() != null && journalMaster.getJAmount().compareTo(BigDecimal.ZERO) < 0) {
-            throw new JournalMasterValidationException("Amount cannot be negative");
-        }
-
-        // Validate narration length
-        if (journalMaster.getJNarr() != null && journalMaster.getJNarr().length() > 100) {
-            throw new JournalMasterValidationException("Narration must not exceed 100 characters");
-        }
-
-        return journalMasterRepository.update(journalMaster);
+        // If it's in the ledger, it's already posted. Posted vouchers are
+        // immutable; correct them with a new voucher, not by editing the header.
+        throw new JournalVoucherPostedException(
+                "Journal voucher " + jId + " is already posted and cannot be modified");
     }
 }

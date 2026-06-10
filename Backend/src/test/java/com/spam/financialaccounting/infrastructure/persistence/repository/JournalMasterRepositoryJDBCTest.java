@@ -24,17 +24,13 @@ import com.spam.financialaccounting.presentation.exception.journalmaster.Journal
 /**
  * Integration tests for JournalMasterRepositoryJDBC.
  *
- * Design decisions:
- * - @JdbcTest auto-executes schema.sql, which creates ALL 4 tables (FAGroup,
- * FASubGroup,
- * JournalMaster, JournalDetail) including FK constraints.
- * - We must NOT drop/recreate JournalMaster because JournalDetail has a FK on
- * it.
- * - Instead we use DELETE FROM to clear data between tests (safe, fast, no
- * DDL).
- * - We also delete from JournalDetail first to satisfy the FK before clearing
- * JournalMaster.
- * - J_DATE is a DATETIME column in schema.sql — we pass LocalDateTime directly
+ * A few notes on the setup:
+ * - @JdbcTest runs schema.sql, which creates all 4 tables (FAGroup, FASubGroup,
+ * JournalMaster, JournalDetail) with their FK constraints.
+ * - Don't drop/recreate JournalMaster, since JournalDetail has a FK on it.
+ * - We DELETE FROM to clear data between tests instead (fast, no DDL).
+ * - Clear JournalDetail before JournalMaster so the FK is happy.
+ * - J_DATE is a DATETIME column in schema.sql, so we hand LocalDateTime straight
  * to JDBC.
  */
 @JdbcTest
@@ -49,18 +45,19 @@ public class JournalMasterRepositoryJDBCTest {
 
     private static final LocalDateTime FIXED_DATE = LocalDateTime.of(2024, 1, 15, 10, 0);
 
-    // @BeforeEach: clear data (not DDL) — schema.sql already created the tables.
-    // JournalDetail must be cleared before JournalMaster due to FK constraint.
+    // Clear data, not DDL; schema.sql already made the tables.
+    // Clear JournalDetail before JournalMaster because of the FK.
     @BeforeEach
     void clearTables() {
         jdbcTemplate.execute("DELETE FROM JournalDetail");
         jdbcTemplate.execute("DELETE FROM JournalMaster");
+        jdbcTemplate.execute("DELETE FROM JournalSequence");
     }
 
-    // HELPER: Insert a row directly, bypassing save() guard logic.
+    // HELPER: insert a row directly, skipping save()'s guard logic.
     private void insertRow(String jId, String jDoc, LocalDateTime jDate, BigDecimal amount, String jNarr) {
-        // J_DATE is VARCHAR(30) in test schema — store as ISO-8601 string (mirrors
-        // SQLite TEXT behaviour)
+        // J_DATE is VARCHAR(30) in the test schema, so store an ISO-8601 string
+        // (matches SQLite's TEXT behaviour)
         jdbcTemplate.update(
                 "INSERT INTO JournalMaster (J_ID, J_DOC, J_DATE, J_AMOUNT, J_NARR) VALUES (?, ?, ?, ?, ?)",
                 jId, jDoc, jDate.toString(), amount, jNarr);
@@ -105,8 +102,8 @@ public class JournalMasterRepositoryJDBCTest {
         assertThat(result.get().getJId()).isEqualTo("JV00000001");
         assertThat(result.get().getJDoc()).isEqualTo("JV");
         assertThat(result.get().getJAmount()).isEqualByComparingTo("1000.00");
-        assertThat(result.get().getJNarr().trim())
-                .isEqualTo("Entry");
+        // J_NARR is VARCHAR, so it comes back exactly, no CHAR padding to trim.
+        assertThat(result.get().getJNarr()).isEqualTo("Entry");
     }
 
     @Test
@@ -156,8 +153,25 @@ public class JournalMasterRepositoryJDBCTest {
         assertThat(fromDB).isPresent();
         assertThat(fromDB.get().getJDoc()).isEqualTo("PV");
         assertThat(fromDB.get().getJAmount()).isEqualByComparingTo("2000.00");
-        assertThat(fromDB.get().getJNarr().trim())
-                .isEqualTo("Updated");
+        // J_NARR is VARCHAR, so it comes back exactly, no CHAR padding to trim.
+        assertThat(fromDB.get().getJNarr()).isEqualTo("Updated");
+    }
+
+    // Regression: a narration shorter than the column must come back with no
+    // trailing spaces, so API responses never need .trim(). A CHAR(100) column
+    // would pad it out to 100 chars and fail both assertions.
+    @Test
+    @DisplayName("[T-whitespace] J_NARR must not be space-padded on read")
+    void findById_ShouldReturnNarrationWithoutTrailingPadding() {
+        insertRow("JV00000001", "JV", FIXED_DATE, new BigDecimal("1000.00"), "Cash");
+
+        Optional<JournalMaster> result = repository.findById("JV00000001");
+
+        assertThat(result).isPresent();
+        String narration = result.get().getJNarr();
+        assertThat(narration).isEqualTo("Cash");
+        assertThat(narration).hasSize(4);
+        assertThat(narration).doesNotEndWith(" ");
     }
 
     @Test
@@ -230,37 +244,102 @@ public class JournalMasterRepositoryJDBCTest {
     // generateNextId()
 
     @Test
-    @DisplayName("[T15] generateNextId() should return JV{year}0001 when table is empty")
+    @DisplayName("[T15] generateNextId() should return JV{year}000001 (12 chars) when table is empty")
     void generateNextId_ShouldReturnFirstId_WhenTableIsEmpty() {
         int year = LocalDateTime.now().getYear();
-        String expected = String.format("JV%d0001", year);
+        String expected = String.format("JV%d000001", year);
 
         String result = repository.generateNextId();
 
         assertThat(result).isEqualTo(expected);
-        assertThat(result).hasSize(10);
+        assertThat(result).hasSize(12);
     }
 
     @Test
-    @DisplayName("[T16] generateNextId() should increment sequence from existing max ID in current year")
-    void generateNextId_ShouldIncrementSequence_WhenRecordsExist() {
+    @DisplayName("[T16] generateNextId() should issue sequential ids on consecutive calls")
+    void generateNextId_ShouldIncrementSequence_OnConsecutiveCalls() {
         int year = LocalDateTime.now().getYear();
-        insertRow(String.format("JV%d0005", year), "JV", FIXED_DATE, BigDecimal.ONE, "Entry");
 
-        String result = repository.generateNextId();
-
-        assertThat(result).isEqualTo(String.format("JV%d0006", year));
+        assertThat(repository.generateNextId()).isEqualTo(String.format("JV%d000001", year));
+        assertThat(repository.generateNextId()).isEqualTo(String.format("JV%d000002", year));
+        assertThat(repository.generateNextId()).isEqualTo(String.format("JV%d000003", year));
     }
 
     @Test
-    @DisplayName("[T17] generateNextId() should ignore records from previous years")
-    void generateNextId_ShouldIgnorePreviousYearRecords() {
+    @DisplayName("[T17] generateNextId() draws from the sequence counter, not existing JournalMaster rows")
+    void generateNextId_ShouldBeIndependentOfJournalMasterRows() {
         int year = LocalDateTime.now().getYear();
-        // Insert a high-sequence ID from the previous year
-        insertRow(String.format("JV%d0099", year - 1), "JV", FIXED_DATE, BigDecimal.ONE, "Old");
+        // A manually inserted legacy-format row shouldn't affect allocation:
+        // the counter is what counts, so the first id is still 000001.
+        insertRow(String.format("JV%d0099", year), "JV", FIXED_DATE, BigDecimal.ONE, "Manual");
 
         String result = repository.generateNextId();
 
-        assertThat(result).isEqualTo(String.format("JV%d0001", year));
+        assertThat(result).isEqualTo(String.format("JV%d000001", year));
+    }
+
+    // HELPER: preset the per-year counter so we can push generateNextId() up to a
+    // boundary (e.g. 9999) without handing out thousands of ids first.
+    private void setSequence(int year, int lastVal) {
+        int updated = jdbcTemplate.update(
+                "UPDATE JournalSequence SET LAST_VAL = ? WHERE SEQ_YEAR = ?", lastVal, year);
+        if (updated == 0) {
+            jdbcTemplate.update(
+                    "INSERT INTO JournalSequence (SEQ_YEAR, LAST_VAL) VALUES (?, ?)", year, lastVal);
+        }
+    }
+
+    @Test
+    @DisplayName("[T18] generateNextId() at sequence 9999 yields a 12-char id, no overflow")
+    void generateNextId_AtSequence9999() {
+        int year = LocalDateTime.now().getYear();
+        setSequence(year, 9998); // next allocation is 9999
+
+        String result = repository.generateNextId();
+
+        assertThat(result).isEqualTo(String.format("JV%d009999", year));
+        assertThat(result).hasSize(12);
+    }
+
+    @Test
+    @DisplayName("[T19] generateNextId() at sequence 10000 stays 12 chars and persists as a valid PK")
+    void generateNextId_AtSequence10000_DoesNotOverflowPrimaryKey() {
+        int year = LocalDateTime.now().getYear();
+        setSequence(year, 9999); // next allocation is 10000 — the old format's failure point
+
+        String result = repository.generateNextId();
+
+        assertThat(result).isEqualTo(String.format("JV%d010000", year));
+        assertThat(result).hasSize(12);
+
+        // Check the id works as a primary key at this width: insert and read it back.
+        insertRow(result, "JV", FIXED_DATE, new BigDecimal("1.00"), "Boundary");
+        assertThat(repository.findById(result)).isPresent();
+    }
+
+    @Test
+    @DisplayName("[T20] high-volume generation across the 9999→10000 boundary stays unique and 12 chars")
+    void generateNextId_HighVolume_RemainsUniqueAndFixedWidth() {
+        int year = LocalDateTime.now().getYear();
+        setSequence(year, 9990); // start just below the old overflow point
+
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        String at9999 = null;
+        String at10000 = null;
+        for (int seq = 9991; seq <= 10500; seq++) {
+            String id = repository.generateNextId();
+            assertThat(ids.add(id)).as("id %s must be unique", id).isTrue(); // no collisions
+            assertThat(id).hasSize(12).startsWith("JV" + year);
+            if (seq == 9999) {
+                at9999 = id;
+            }
+            if (seq == 10000) {
+                at10000 = id;
+            }
+        }
+
+        assertThat(ids).hasSize(510); // every allocation distinct
+        assertThat(at9999).isEqualTo(String.format("JV%d009999", year));
+        assertThat(at10000).isEqualTo(String.format("JV%d010000", year));
     }
 }

@@ -1,0 +1,6 @@
+target/
+sqlite/
+*.db
+.git/
+*.md
+.mvn/wrapper/maven-wrapper.jar

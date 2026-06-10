@@ -4,5 +4,5 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // Ensures portable, relative asset paths (crucial for local file opening and sub-path hosting)
+  base: './', // relative asset paths so it works opened from a file and under a sub-path
 })

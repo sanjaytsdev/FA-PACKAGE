@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailNotFoundException;
-import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalVoucherPostedException;
 
 @Service
 public class UpdateJournalDetail {
@@ -19,22 +19,16 @@ public class UpdateJournalDetail {
     }
 
     public JournalDetail execute(String jId, String jCode, String jDrCr, BigDecimal newAmount) {
-        // 1.validate amount
-        if (newAmount == null || newAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new JournalDetailValidationException("Amount must be greater than zero");
-        }
-
-        // 2.check if details exists
+        // A line only exists as part of an already-posted voucher.
         JournalDetail existingDetail = journalDetailRepository.findByCompositeKey(jId, jCode, jDrCr)
                 .orElseThrow(() -> new JournalDetailNotFoundException(
                         "Journal detail not found for voucher " + jId +
                                 ", account " + jCode + ", type " + jDrCr));
 
-        // 3. update amount
-        existingDetail.setJAmount(newAmount);
-
-        // 4.save update
-        return journalDetailRepository.update(existingDetail);
+        // The line exists, so its voucher is posted. Posted vouchers are
+        // immutable; you can't edit lines in place.
+        throw new JournalVoucherPostedException(
+                "Journal voucher " + existingDetail.getJId()
+                        + " is already posted; its lines cannot be modified");
     }
-
 }

@@ -27,7 +27,7 @@ public class GetFAGroupWithSubGroups {
     }
 
     public FAGroupWithSubGroupsDTO execute(String code) {
-        FAGroup group = groupRepository.findByCode(code).orElseThrow(()->new FAGroupNotFoundException("Group not found with code: "+code));
+        FAGroup group = groupRepository.findByCode(code).orElseThrow(()->new FAGroupNotFoundException("No account group found with code '"+code+"'."));
         List<FASubGroup> subGroupEntities=subGroupRepository.findByACode(code);
         List<FASubGroupDTO> subGroupDTOs=subGroupEntities.stream().map(FASubGroupDTOMapper::toDTO).collect(Collectors.toList());
         return new FAGroupWithSubGroupsDTO(group.getAccountCode(), group.getAccountDescription(), group.getAccountType(), group.getAccountCurrentBalance(), subGroupDTOs);

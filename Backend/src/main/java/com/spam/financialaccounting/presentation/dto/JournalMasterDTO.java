@@ -26,7 +26,8 @@ public class JournalMasterDTO {
     @DecimalMin(value = "0.00", message = "Amount must be zero or positive")
     private BigDecimal jAmount;
 
-    @Size(max = 100, message = "Narration must not exceed 100 characters")
+    @NotBlank(message = "Narration is required")
+    @Size(min = 5, max = 100, message = "Narration must be between 5 and 100 characters")
     private String jNarr;
 
     public JournalMasterDTO() {

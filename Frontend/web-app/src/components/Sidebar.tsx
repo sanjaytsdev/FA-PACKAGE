@@ -1,8 +1,8 @@
 import React from "react";
-import { LayoutDashboard, FolderTree, Landmark, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, FolderTree, Landmark, FileSpreadsheet, Scale, Wallet, Lock, TrendingUp, BookOpen } from 'lucide-react';
 
 interface SidebarProps {
-    activeTab: string;  // Fix: was `String` (JS object) — must be primitive `string`
+    activeTab: string;  // was `String` (the JS object); has to be the primitive `string`
     setActiveTab: (tab: string) => void;
 }
 
@@ -11,7 +11,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { id: 'groups', label: 'Account Groups', icon: FolderTree },
         { id: 'ledgers', label: 'Ledger Accounts', icon: Landmark },
+        { id: 'opening-balances', label: 'Opening Balances', icon: Wallet },
         { id: 'journals', label: 'Journal Vouchers', icon: FileSpreadsheet },
+        { id: 'trial-balance', label: 'Trial Balance', icon: Scale },
+        { id: 'profit-and-loss', label: 'Profit & Loss', icon: TrendingUp },
+        { id: 'balance-sheet', label: 'Balance Sheet', icon: BookOpen },
+        { id: 'period-locks', label: 'Period Locks', icon: Lock },
     ];
 
     return (

@@ -1,61 +1,47 @@
 package com.spam.financialaccounting.presentation.controller;
 
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.spam.financialaccounting.application.usecases.journaldetail.CreateJournalDetail;
-import com.spam.financialaccounting.application.usecases.journaldetail.DeleteJournalDetail;
 import com.spam.financialaccounting.application.usecases.journaldetail.GetAllJournalDetails;
 import com.spam.financialaccounting.application.usecases.journaldetail.GetJournalDetail;
 import com.spam.financialaccounting.application.usecases.journaldetail.GetJournalDetailsByAccountCode;
 import com.spam.financialaccounting.application.usecases.journaldetail.GetJournalDetailsByJournalId;
-import com.spam.financialaccounting.application.usecases.journaldetail.UpdateJournalDetail;
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 import com.spam.financialaccounting.infrastructure.persistence.mapper.JournalDetailDTOMapper;
 import com.spam.financialaccounting.presentation.dto.JournalDetailDTO;
-import com.spam.financialaccounting.presentation.dto.JournalDetailUpdateRequestDTO;
 
-import org.springframework.web.bind.annotation.RequestBody;
-import jakarta.validation.Valid;
-
+/**
+ * Read-only access to journal voucher lines.
+ *
+ * No create/update/delete here, on purpose. Editing one line on its own would
+ * break the double-entry balance of its voucher, so all posting and removal goes
+ * through {@link JournalVoucherController} (/api/v1/journal-vouchers), which
+ * validates and saves a whole balanced voucher in one shot.
+ */
 @RestController
 @RequestMapping("/api/v1/journal-details")
 public class JournalDetailController {
 
-    private final CreateJournalDetail createUseCase;
     private final GetJournalDetail getUseCase;
     private final GetAllJournalDetails getAllUseCase;
     private final GetJournalDetailsByJournalId getByJournalIdUseCase;
     private final GetJournalDetailsByAccountCode getByAccountCodeUseCase;
-    private final UpdateJournalDetail updateUseCase;
-    private final DeleteJournalDetail deleteUseCase;
 
-    public JournalDetailController(CreateJournalDetail createUseCase,
-            GetJournalDetail getUseCase,
+    public JournalDetailController(GetJournalDetail getUseCase,
             GetAllJournalDetails getAllUseCase,
             GetJournalDetailsByJournalId getByJournalIdUseCase,
-            GetJournalDetailsByAccountCode getByAccountCodeUseCase,
-            UpdateJournalDetail updateUseCase,
-            DeleteJournalDetail deleteUseCase) {
-        this.createUseCase = createUseCase;
+            GetJournalDetailsByAccountCode getByAccountCodeUseCase) {
         this.getUseCase = getUseCase;
         this.getAllUseCase = getAllUseCase;
         this.getByJournalIdUseCase = getByJournalIdUseCase;
         this.getByAccountCodeUseCase = getByAccountCodeUseCase;
-        this.updateUseCase = updateUseCase;
-        this.deleteUseCase = deleteUseCase;
     }
 
     @GetMapping("/{jId}/{jCode}/{jDrCr}")
@@ -87,32 +73,6 @@ public class JournalDetailController {
                 .map(JournalDetailDTOMapper::toDTO)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(dtos);
-    }
-
-    @PostMapping
-    public ResponseEntity<JournalDetailDTO> create(@Valid @RequestBody JournalDetailDTO dto) {
-        JournalDetail entity = JournalDetailDTOMapper.toEntity(dto);
-        JournalDetail created = createUseCase.execute(entity);
-        return ResponseEntity.status(HttpStatus.CREATED).body(JournalDetailDTOMapper.toDTO(created));
-    }
-
-    @PutMapping("/{jId}/{jCode}/{jDrCr}")
-    public ResponseEntity<JournalDetailDTO> update(@PathVariable String jId,
-            @PathVariable String jCode,
-            @PathVariable String jDrCr,
-            @Valid @RequestBody JournalDetailUpdateRequestDTO request) {
-        JournalDetail updated = updateUseCase.execute(jId, jCode, jDrCr, request.getJAmount());
-        return ResponseEntity.ok(JournalDetailDTOMapper.toDTO(updated));
-    }
-
-    @DeleteMapping("/{jId}/{jCode}/{jDrCr}")
-    public ResponseEntity<Void> delete(
-            @PathVariable String jId,
-            @PathVariable String jCode,
-            @PathVariable String jDrCr) {
-        deleteUseCase.execute(jId, jCode, jDrCr);
-        return ResponseEntity.noContent().build();
-
     }
 
 }

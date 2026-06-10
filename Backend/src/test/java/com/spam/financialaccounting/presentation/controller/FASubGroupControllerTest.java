@@ -18,6 +18,7 @@ import com.spam.financialaccounting.application.usecases.fasubgroup.UpdateFASubG
 import com.spam.financialaccounting.domain.entity.FASubGroup;
 import com.spam.financialaccounting.presentation.dto.FASubGroupDTO;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupAlreadyExistsException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupHasTransactionsException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
 import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupValidationException;
 
@@ -81,12 +82,12 @@ public class FASubGroupControllerTest {
     @DisplayName("GET /{code} → 404 Not Found when code does not exist")
     void getByCode_ShouldReturn404_WhenNotFound() throws Exception {
         when(getFASubGroupByCode.execute("99999"))
-                .thenThrow(new FASubGroupNotFoundException("FASubGroup not found with code: 99999"));
+                .thenThrow(new FASubGroupNotFoundException("No ledger account found with code '99999'."));
 
         mockMvc.perform(get("/api/v1/ledger-accounts/99999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("FASubGroup not found with code: 99999"));
+                .andExpect(jsonPath("$.message").value("No ledger account found with code '99999'."));
     }
 
     // GET /api/v1/ledger-accounts
@@ -134,14 +135,14 @@ public class FASubGroupControllerTest {
     @DisplayName("POST / → 409 Conflict when group code already exists")
     void create_ShouldReturn409_WhenAlreadyExists() throws Exception {
         when(createFASubGroup.execute(any(FASubGroup.class)))
-                .thenThrow(new FASubGroupAlreadyExistsException("Ledger Account already exist with code: 10001"));
+                .thenThrow(new FASubGroupAlreadyExistsException("A ledger account with code '10001' already exists. Please choose a different code."));
 
         mockMvc.perform(post("/api/v1/ledger-accounts")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(sampleDTO)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.message").value("Ledger Account already exist with code: 10001"));
+                .andExpect(jsonPath("$.message").value("A ledger account with code '10001' already exists. Please choose a different code."));
     }
 
     @Test
@@ -207,6 +208,26 @@ public class FASubGroupControllerTest {
                 .content(objectMapper.writeValueAsString(updateDTO)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Ledger Account with code 99999 not found."));
+    }
+
+    @Test
+    @DisplayName("PUT /{code} → 422 Unprocessable Entity when changing a locked field after transactions exist")
+    void update_ShouldReturn422_WhenAccountHasTransactions() throws Exception {
+        when(updateFASubGroup.execute(any(FASubGroup.class)))
+                .thenThrow(new FASubGroupHasTransactionsException(
+                        "Cannot modify opening balance (S_OPBAL) of ledger account 10001 because journal "
+                        + "transactions already exist for it. These fields are locked to preserve historical "
+                        + "financial statements."));
+
+        FASubGroupDTO updateDTO = new FASubGroupDTO("10001", "Cash", "01", "00", new BigDecimal("5000.00"), "DR", "T");
+
+        mockMvc.perform(put("/api/v1/ledger-accounts/10001")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateDTO)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.status").value(422))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString(
+                        "Cannot modify opening balance")));
     }
 
     // DELETE /api/v1/ledger-accounts/{code}

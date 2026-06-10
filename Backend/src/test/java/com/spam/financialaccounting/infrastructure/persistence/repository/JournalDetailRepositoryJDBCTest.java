@@ -99,7 +99,7 @@ public class JournalDetailRepositoryJDBCTest {
         // ACT + ASSERT — save() checks existsByCompositeKey internally and throws
         assertThatThrownBy(() -> repository.save(duplicate))
                 .isInstanceOf(JournalDetailAlreadyExistsException.class)
-                .hasMessageContaining("JournalDetail already exists");
+                .hasMessageContaining("This journal line already exists.");
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -264,7 +264,7 @@ public class JournalDetailRepositoryJDBCTest {
         // ACT + ASSERT — the impl checks rowsAffected == 0 and throws
         assertThatThrownBy(() -> repository.update(ghost))
                 .isInstanceOf(JournalDetailNotFoundException.class)
-                .hasMessageContaining("No JournalDetail found to update");
+                .hasMessageContaining("No journal line found to update.");
     }
 
     // ═══════════════════════════════════════════════════════════

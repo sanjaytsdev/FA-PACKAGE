@@ -1,5 +1,7 @@
 package com.spam.financialaccounting.infrastructure.persistence.repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,6 +12,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.dao.DataAccessException;
 
 import com.spam.financialaccounting.domain.entity.JournalDetail;
+import com.spam.financialaccounting.domain.repository.AccountPostingTotals;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
 import com.spam.financialaccounting.infrastructure.persistence.mapper.JournalDetailRowMapper;
 import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailAlreadyExistsException;
@@ -30,7 +33,7 @@ public class JournalDetailRepositoryJDBC implements JournalDetailRepository {
     @Transactional
     public void save(JournalDetail detail) {
         if (existsByCompositeKey(detail.getJId(), detail.getJCode(), detail.getJDrCr())) {
-            throw new JournalDetailAlreadyExistsException("JournalDetail already exists");
+            throw new JournalDetailAlreadyExistsException("This journal line already exists.");
         }
         String sql = "INSERT INTO JournalDetail(J_ID,J_CODE,J_DRCR,J_AMOUNT) VALUES(?,?,?,?)";
         jdbcTemplate.update(sql, detail.getJId(), detail.getJCode(), detail.getJDrCr(), detail.getJAmount());
@@ -65,12 +68,34 @@ public class JournalDetailRepositoryJDBC implements JournalDetailRepository {
     }
 
     @Override
+    public List<AccountPostingTotals> sumPostingsAsOf(LocalDate asOfDate) {
+        // Want every voucher dated on or before asOfDate. J_DATE is stored as an
+        // ISO-8601 string, which sorts chronologically, so we use an exclusive
+        // "start of next day" bound to catch every time on asOfDate while leaving
+        // future-dated vouchers out. The DB does the summing — we never pull the
+        // individual detail rows into memory.
+        String upperBoundExclusive = asOfDate.plusDays(1).atStartOfDay().toString();
+        String sql = "SELECT d.J_CODE AS J_CODE, "
+                + "SUM(CASE WHEN d.J_DRCR = 'DR' THEN d.J_AMOUNT ELSE 0 END) AS TOTAL_DEBIT, "
+                + "SUM(CASE WHEN d.J_DRCR = 'CR' THEN d.J_AMOUNT ELSE 0 END) AS TOTAL_CREDIT "
+                + "FROM JournalDetail d "
+                + "JOIN JournalMaster m ON d.J_ID = m.J_ID "
+                + "WHERE m.J_DATE < ? "
+                + "GROUP BY d.J_CODE";
+        return jdbcTemplate.query(sql, (rs, n) -> new AccountPostingTotals(
+                rs.getString("J_CODE"),
+                rs.getBigDecimal("TOTAL_DEBIT") != null ? rs.getBigDecimal("TOTAL_DEBIT") : BigDecimal.ZERO,
+                rs.getBigDecimal("TOTAL_CREDIT") != null ? rs.getBigDecimal("TOTAL_CREDIT") : BigDecimal.ZERO),
+                upperBoundExclusive);
+    }
+
+    @Override
     public JournalDetail update(JournalDetail detail) {
         String sql = "UPDATE JournalDetail SET J_AMOUNT=? WHERE J_ID=? AND J_CODE=? AND J_DRCR=?";
         int rowsAffected = jdbcTemplate.update(sql, detail.getJAmount(), detail.getJId(), detail.getJCode(),
                 detail.getJDrCr());
         if (rowsAffected == 0) {
-            throw new JournalDetailNotFoundException("No JournalDetail found to update");
+            throw new JournalDetailNotFoundException("No journal line found to update.");
         }
         return detail;
     }

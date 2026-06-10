@@ -13,11 +13,16 @@ import java.util.concurrent.CompletableFuture;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.spam.financialaccounting.desktop.model.BalanceSheet;
 import com.spam.financialaccounting.desktop.model.FAGroup;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
 import com.spam.financialaccounting.desktop.model.JournalDetail;
 import com.spam.financialaccounting.desktop.model.JournalMaster;
+import com.spam.financialaccounting.desktop.model.PeriodLock;
+import com.spam.financialaccounting.desktop.model.ProfitAndLoss;
+import com.spam.financialaccounting.desktop.model.TrialBalance;
 
 public class ApiClient {
     private static final String BASE_URL = loadBaseUrl();
@@ -54,6 +59,8 @@ public class ApiClient {
         this.mapper = new ObjectMapper();
         this.mapper.registerModule(new JavaTimeModule());
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        // Write dates as ISO-8601 strings (e.g. "2026-06-08T00:00:00"), not numeric arrays
+        this.mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     public CompletableFuture<Boolean> pingAsync() {
@@ -211,11 +218,125 @@ public class ApiClient {
         handleErrorResponse(response);
     }
 
+    // --- JOURNAL VOUCHERS (balanced; post/reverse/delete happen atomically) ---
+    public JournalMaster postJournalVoucher(Object request) throws IOException, InterruptedException {
+        String json = mapper.writeValueAsString(request);
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/journal-vouchers"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), JournalMaster.class);
+    }
+
+    public void deleteJournalVoucher(String jId) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/journal-vouchers/" + jId))
+                .DELETE()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+    }
+
+    public JournalMaster reverseJournalVoucher(String jId) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/journal-vouchers/" + jId + "/reverse"))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), JournalMaster.class);
+    }
+
+    // --- OPENING BALANCES ---
+    public JournalMaster importOpeningBalances(Object request) throws IOException, InterruptedException {
+        String json = mapper.writeValueAsString(request);
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/opening-balances/import"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), JournalMaster.class);
+    }
+
+    // --- PERIOD LOCKS ---
+    public List<PeriodLock> getPeriodLocks() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/period-locks"))
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), new TypeReference<List<PeriodLock>>() {
+        });
+    }
+
+    public PeriodLock createPeriodLock(Object request) throws IOException, InterruptedException {
+        String json = mapper.writeValueAsString(request);
+        HttpRequest httpRequest = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/period-locks"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+        HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), PeriodLock.class);
+    }
+
+    public void deletePeriodLock(long id) throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/period-locks/" + id))
+                .DELETE()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+    }
+
+    // --- REPORTS ---
+    // asOfDate (yyyy-MM-dd) limits the report to vouchers posted on or before that
+    // date. Pass null to report as of today.
+    public TrialBalance getTrialBalance(String asOfDate) throws IOException, InterruptedException {
+        String query = (asOfDate != null && !asOfDate.isBlank()) ? "?asOfDate=" + asOfDate : "";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/reports/trial-balance" + query))
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), TrialBalance.class);
+    }
+
+    public ProfitAndLoss getProfitAndLoss(String asOfDate) throws IOException, InterruptedException {
+        String query = (asOfDate != null && !asOfDate.isBlank()) ? "?asOfDate=" + asOfDate : "";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/reports/profit-and-loss" + query))
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), ProfitAndLoss.class);
+    }
+
+    public BalanceSheet getBalanceSheet(String asOfDate) throws IOException, InterruptedException {
+        String query = (asOfDate != null && !asOfDate.isBlank()) ? "?asOfDate=" + asOfDate : "";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/reports/balance-sheet" + query))
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        handleErrorResponse(response);
+        return mapper.readValue(response.body(), BalanceSheet.class);
+    }
+
     private void handleErrorResponse(HttpResponse<String> response) throws IOException {
         if (response.statusCode() >= 400) {
             String errorMsg = "HTTP Status Code " + response.statusCode();
             try {
-                // parse standard Spring boot error format
+                // pull the message out of Spring Boot's standard error body
                 var map = mapper.readValue(response.body(), new TypeReference<Map<String, Object>>() {
                 });
                 if (map.containsKey("message")) {

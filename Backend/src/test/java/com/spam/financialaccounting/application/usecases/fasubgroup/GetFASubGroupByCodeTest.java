@@ -57,7 +57,7 @@ public class GetFASubGroupByCodeTest {
         // ACT & ASSERT
         assertThatThrownBy(() -> getFASubGroupByCode.execute("99999"))
                 .isInstanceOf(FASubGroupNotFoundException.class)
-                .hasMessageContaining("FASubGroup not found with code: 99999");
+                .hasMessageContaining("No ledger account found with code '99999'.");
     }
 
     @Test
@@ -66,17 +66,17 @@ public class GetFASubGroupByCodeTest {
         // ACT & ASSERT for null
         assertThatThrownBy(() -> getFASubGroupByCode.execute(null))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("sCode cannot be null or empty");
+                .hasMessageContaining("Ledger account code is required.");
 
         // ACT & ASSERT for empty
         assertThatThrownBy(() -> getFASubGroupByCode.execute(""))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("sCode cannot be null or empty");
+                .hasMessageContaining("Ledger account code is required.");
 
         // ACT & ASSERT for whitespace
         assertThatThrownBy(() -> getFASubGroupByCode.execute("   "))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("sCode cannot be null or empty");
+                .hasMessageContaining("Ledger account code is required.");
 
         verify(repository, never()).findByCode(anyString());
     }

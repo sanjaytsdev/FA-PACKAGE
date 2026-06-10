@@ -85,7 +85,7 @@ public class FASubGroupsView extends HBox {
                 codeInput.setDisable(true);
                 descInput.setText(newSel.getSDesc());
 
-                // Select parent group matching code
+                // pick the parent group whose code matches
                 for (FAGroup g : parentSelect.getItems()) {
                     if (g.getAccountCode().equals(newSel.getACode())) {
                         parentSelect.setValue(g);
@@ -104,7 +104,7 @@ public class FASubGroupsView extends HBox {
 
         leftPane.getChildren().addAll(title, table);
 
-        // Editor Form
+        // The editor form
         VBox rightPane = new VBox();
         rightPane.getStyleClass().add("card");
         rightPane.setSpacing(10);
@@ -123,7 +123,7 @@ public class FASubGroupsView extends HBox {
         parentSelect.setPromptText("Select Parent Account Group");
         parentSelect.setOnAction(e -> {
             FAGroup selected = parentSelect.getValue();
-            // Auto-fill sub-type and normal side only when creating a new account
+            // only auto-fill sub-type and side when adding a new account, not editing
             if (selected != null && selectedSubGroup == null) {
                 String type = selected.getAccountType();
                 typeInput.setText(type + "0");

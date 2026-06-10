@@ -50,7 +50,7 @@ public class GetFAGroupByCodeTest {
         // ASSERT — exception thrown with correct message
         assertThatThrownBy(() -> getFAGroupByCode.execute("99"))
                 .isInstanceOf(FAGroupNotFoundException.class)
-                .hasMessageContaining("FAGroup not found with code: 99");
+                .hasMessageContaining("No account group found with code '99'.");
     }
 
     @Test

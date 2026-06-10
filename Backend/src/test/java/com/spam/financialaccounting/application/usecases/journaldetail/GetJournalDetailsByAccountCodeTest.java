@@ -23,7 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 import com.spam.financialaccounting.domain.repository.FASubGroupRepository;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
-import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+import com.spam.financialaccounting.presentation.exception.fasubgroup.FASubGroupNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 public class GetJournalDetailsByAccountCodeTest {
@@ -72,14 +72,14 @@ public class GetJournalDetailsByAccountCodeTest {
     }
 
     @Test
-    @DisplayName("Should throw ValidationException when account code does not exist in FASubGroup")
+    @DisplayName("Should throw NotFoundException when account code does not exist in FASubGroup")
     void shouldThrow_WhenAccountCodeNotFound() {
         // ARRANGE
         when(faSubGroupRepository.existsByCode("INVALID")).thenReturn(false);
 
         // ACT + ASSERT
         assertThatThrownBy(() -> getJournalDetailsByAccountCode.execute("INVALID"))
-                .isInstanceOf(JournalDetailValidationException.class)
+                .isInstanceOf(FASubGroupNotFoundException.class)
                 .hasMessageContaining("Ledger account with code INVALID does not exist");
 
         // Repository query should never be called if the code doesn't exist
@@ -92,7 +92,7 @@ public class GetJournalDetailsByAccountCodeTest {
         when(faSubGroupRepository.existsByCode("SG99")).thenReturn(false);
 
         assertThatThrownBy(() -> getJournalDetailsByAccountCode.execute("SG99"))
-                .isInstanceOf(JournalDetailValidationException.class);
+                .isInstanceOf(FASubGroupNotFoundException.class);
 
         // confirm the guard runs BEFORE the query
         verify(faSubGroupRepository, times(1)).existsByCode("SG99");

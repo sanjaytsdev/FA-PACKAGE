@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import com.spam.financialaccounting.domain.entity.JournalDetail;
 import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
 import com.spam.financialaccounting.domain.repository.JournalMasterRepository;
-import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailValidationException;
+import com.spam.financialaccounting.presentation.exception.journalmaster.JournalMasterNotFoundException;
 
 @Service
 public class GetJournalDetailsByJournalId {
@@ -22,9 +22,10 @@ public class GetJournalDetailsByJournalId {
     }
 
     public List<JournalDetail> execute(String jId) {
-        //validate that the journal voucher exists
+        // The voucher in the path has to exist; a missing one is a 404, same as
+        // GetJournalMasterById/GetJournalDetail.
         if(!journalMasterRepository.existsById(jId)) {
-            throw new JournalDetailValidationException("Journal voucher with ID " + jId + " does not exist");
+            throw new JournalMasterNotFoundException("Journal voucher with ID " + jId + " does not exist");
         }
 
         return journalDetailRepository.findByJournalId(jId);

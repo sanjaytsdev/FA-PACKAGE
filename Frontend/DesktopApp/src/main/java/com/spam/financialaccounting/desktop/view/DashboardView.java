@@ -50,7 +50,7 @@ public class DashboardView extends VBox {
         grid.add(cardJournals, 0, 1);
         grid.add(cardTb, 1, 1);
 
-        // make columns expand equally
+        // split the width evenly between the two columns
         ColumnConstraints cc = new ColumnConstraints();
         cc.setPercentWidth(50);
         grid.getColumnConstraints().addAll(cc, cc);
@@ -81,10 +81,8 @@ public class DashboardView extends VBox {
                 List<FASubGroup> ledgers = apiClient.getLedgerAccounts();
                 List<JournalMaster> journals = apiClient.getJournalMasters();
 
-                // Compute overall balance integrity. Total Debits should equal Total Credits in
-                // double-entry bookkeeping.
-                // Since individual ledgers have opening balances and types, let's verify if sum
-                // is balanced.
+                // Check the books balance: in double-entry, total debits should equal total credits.
+                // Each ledger has an opening balance and a side, so sum them up and see if it nets to zero.
                 BigDecimal totalBalance = BigDecimal.ZERO;
                 for (FASubGroup ledger : ledgers) {
                     BigDecimal balance = ledger.getSOpbal() != null ? ledger.getSOpbal() : BigDecimal.ZERO;

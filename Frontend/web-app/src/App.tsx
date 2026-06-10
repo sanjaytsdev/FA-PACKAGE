@@ -5,6 +5,11 @@ import { DashboardView } from './components/DashboardView';
 import { GroupsView } from './components/GroupsView';
 import { LedgersView } from './components/LedgersView';
 import { JournalsView } from './components/JournalsView';
+import { TrialBalanceView } from './components/TrialBalanceView';
+import { OpeningBalancesView } from './components/OpeningBalancesView';
+import { PeriodLocksView } from './components/PeriodLocksView';
+import { ProfitAndLossView } from './components/ProfitAndLossView';
+import { BalanceSheetView } from './components/BalanceSheetView';
 
 function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -17,8 +22,18 @@ function App() {
         return <GroupsView />;
       case 'ledgers':
         return <LedgersView />;
+      case 'opening-balances':
+        return <OpeningBalancesView />;
       case 'journals':
         return <JournalsView />;
+      case 'trial-balance':
+        return <TrialBalanceView />;
+      case 'profit-and-loss':
+        return <ProfitAndLossView />;
+      case 'balance-sheet':
+        return <BalanceSheetView />;
+      case 'period-locks':
+        return <PeriodLocksView />;
       default:
         return <DashboardView />;
     }

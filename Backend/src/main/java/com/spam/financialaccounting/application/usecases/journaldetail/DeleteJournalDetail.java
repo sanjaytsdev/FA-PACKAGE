@@ -2,27 +2,22 @@ package com.spam.financialaccounting.application.usecases.journaldetail;
 
 import org.springframework.stereotype.Service;
 
-import com.spam.financialaccounting.domain.repository.JournalDetailRepository;
-import com.spam.financialaccounting.presentation.exception.journaldetail.JournalDetailNotFoundException;
-
+/**
+ * Deleting a single journal line is disabled.
+ *
+ * Removing one line of a posted voucher leaves the rest unbalanced, which breaks
+ * double-entry. Posted vouchers are immutable; correct them through
+ * {@link com.spam.financialaccounting.application.usecases.journalvoucher.ReverseJournalVoucher}
+ * (POST /api/v1/journal-vouchers/{jId}/reverse), which posts a balanced reversing
+ * voucher. This bean is just a fail-fast guard.
+ */
 @Service
 public class DeleteJournalDetail {
 
-    private final JournalDetailRepository journalDetailRepository;
-
-    public DeleteJournalDetail(JournalDetailRepository journalDetailRepository) {
-        this.journalDetailRepository = journalDetailRepository;
-    }
-
     public boolean execute(String jId, String jCode, String jDrCr) {
-        // 1.check if detail exists
-        if (!journalDetailRepository.existsByCompositeKey(jId, jCode, jDrCr)) {
-            throw new JournalDetailNotFoundException(
-                    "Journal detail not found for voucher " + jId +
-                            ", account " + jCode + ", type " + jDrCr);
-        }
-
-        return journalDetailRepository.deleteByCompositeKey(jId, jCode, jDrCr);
+        throw new UnsupportedOperationException(
+                "Deleting an individual journal line is disabled; it would unbalance its voucher. "
+                        + "Reverse the whole voucher via ReverseJournalVoucher "
+                        + "(POST /api/v1/journal-vouchers/{jId}/reverse) instead.");
     }
-
 }

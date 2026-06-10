@@ -159,8 +159,7 @@ public class FAGroupRepositoryJDBCTest {
         // ARRANGE — nothing in the DB
         FAGroup ghost = new FAGroup("99", "Ghost", "0", BigDecimal.ZERO);
         // ACT + ASSERT — no exception should be thrown
-        // This is a known gap in the implementation: it silently fails.
-        // This test DOCUMENTS that behavior.
+        // Known gap: the impl just fails silently here. This test pins that down.
         FAGroup result = repository.update(ghost);
         assertThat(result).isNotNull(); // returns the passed object
         assertThat(repository.findByCode("99")).isEmpty(); // nothing was inserted
@@ -208,10 +207,9 @@ public class FAGroupRepositoryJDBCTest {
     @Test
     @DisplayName("[T13] existsByCode() should return false when COUNT(*) returns null (null-safe check)")
     void existsByCode_ShouldHandleNullCountGracefully() {
-        // This test verifies the null-safety of:
-        // return count != null && count > 0;
-        // We can't force H2 to return null for COUNT(*), so we test the boundary:
-        // a code that definitely doesn't exist must not throw a NullPointerException.
+        // Checks the null guard in: return count != null && count > 0;
+        // We can't make H2 return null for COUNT(*), so we test the edge case:
+        // a code that definitely isn't there shouldn't throw a NullPointerException.
         assertThat(repository.existsByCode("XY")).isFalse();
     }
 
