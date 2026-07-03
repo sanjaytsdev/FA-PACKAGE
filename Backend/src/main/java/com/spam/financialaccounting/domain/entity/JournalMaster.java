@@ -8,7 +8,7 @@ public class JournalMaster {
     private String jDoc;  // Document type (e.g., 'JV' for Journal Voucher)
     private LocalDateTime jDate;  // Voucher date
     private BigDecimal jAmount;  // Total voucher amount (calculated from lines)
-    private String jNarr;  // Voucher narration/description (optional)
+    private String jNarr;  // Voucher narration/description (mandatory, min 5 chars)
 
     // Constructor
     public JournalMaster(String jId, String jDoc, LocalDateTime jDate, BigDecimal jAmount, String jNarr) {
