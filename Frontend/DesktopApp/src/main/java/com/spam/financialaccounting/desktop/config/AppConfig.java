@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Application configuration resolved once at startup.
@@ -13,6 +15,8 @@ import java.util.Properties;
  * can be edited without recompiling.
  */
 public final class AppConfig {
+
+    private static final Logger LOG = Logger.getLogger(AppConfig.class.getName());
 
     /** Property key for the backend REST base URL. */
     private static final String BASE_URL_KEY = "api.base.url";
@@ -43,14 +47,14 @@ public final class AppConfig {
                     return url.trim();
                 }
             } catch (Exception ex) {
-                System.err.println("Error loading " + CONFIG_FILE + ": " + ex.getMessage());
+                LOG.log(Level.WARNING, "Error loading " + CONFIG_FILE, ex);
             }
         } else {
             try (FileOutputStream out = new FileOutputStream(configFile)) {
                 props.setProperty(BASE_URL_KEY, DEFAULT_BASE_URL);
                 props.store(out, "FA-PACKAGE Desktop Client Settings");
             } catch (Exception ex) {
-                System.err.println("Error creating default " + CONFIG_FILE + ": " + ex.getMessage());
+                LOG.log(Level.WARNING, "Error creating default " + CONFIG_FILE, ex);
             }
         }
         return DEFAULT_BASE_URL;

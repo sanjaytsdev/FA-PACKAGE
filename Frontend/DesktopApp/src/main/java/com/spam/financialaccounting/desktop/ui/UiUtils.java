@@ -1,6 +1,7 @@
 package com.spam.financialaccounting.desktop.ui;
 
 import java.math.BigDecimal;
+import java.util.logging.Logger;
 
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -10,6 +11,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 public class UiUtils {
+
+    private static final Logger LOG = Logger.getLogger(UiUtils.class.getName());
 
     /** Format money with thousands separators and two decimals (e.g. 1,250.00). */
     public static String money(BigDecimal value) {
@@ -42,7 +45,7 @@ public class UiUtils {
         if (resource != null) {
             scene.getStylesheets().add(resource.toExternalForm());
         } else {
-            System.err.println("Warning: styles.css resource not found on classpath.");
+            LOG.warning("styles.css resource not found on classpath.");
         }
     }
 
@@ -52,7 +55,7 @@ public class UiUtils {
         if (resource != null) {
             dialogPane.getStylesheets().add(resource.toExternalForm());
         } else {
-            System.err.println("Warning: styles.css resource not found on classpath.");
+            LOG.warning("styles.css resource not found on classpath.");
         }
     }
 
