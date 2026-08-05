@@ -4,11 +4,11 @@ import com.spam.financialaccounting.desktop.api.ApiClient;
 import com.spam.financialaccounting.desktop.config.UiConstants;
 import com.spam.financialaccounting.desktop.model.ReportLineItem;
 import com.spam.financialaccounting.desktop.ui.AsyncUi;
+import com.spam.financialaccounting.desktop.ui.ReportSection;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -64,28 +64,7 @@ public class ProfitAndLossView extends VBox {
     }
 
     private VBox buildSection(String name, TableView<ReportLineItem> tableView, Label totalLabel) {
-        Label sectionTitle = new Label(name);
-        sectionTitle.getStyleClass().add("card-title");
-
-        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        tableView.setPlaceholder(new Label("No accounts"));
-        tableView.setPrefHeight(180);
-
-        TableColumn<ReportLineItem, String> colCode = new TableColumn<>("Account");
-        colCode.setCellValueFactory(new PropertyValueFactory<>("accountCode"));
-        colCode.setPrefWidth(120);
-        TableColumn<ReportLineItem, String> colDesc = new TableColumn<>("Description");
-        colDesc.setCellValueFactory(new PropertyValueFactory<>("description"));
-        colDesc.setPrefWidth(280);
-        TableColumn<ReportLineItem, BigDecimal> colAmt = UiUtils.moneyColumn("Amount", "amount");
-        colAmt.setPrefWidth(160);
-        tableView.getColumns().addAll(colCode, colDesc, colAmt);
-
-        totalLabel.setStyle("-fx-font-weight: bold;");
-
-        VBox section = new VBox(10, sectionTitle, tableView, totalLabel);
-        section.getStyleClass().add("card");
-        return section;
+        return ReportSection.build(name, tableView, totalLabel, 120, 280, 160);
     }
 
     private void load() {
