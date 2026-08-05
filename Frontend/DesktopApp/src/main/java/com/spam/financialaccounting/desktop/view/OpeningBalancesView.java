@@ -3,6 +3,7 @@ package com.spam.financialaccounting.desktop.view;
 import com.spam.financialaccounting.desktop.api.ApiClient;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
 import com.spam.financialaccounting.desktop.model.JournalMaster;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -197,21 +198,14 @@ public class OpeningBalancesView extends VBox {
         request.put("lines", lines);
 
         importBtn.setDisable(true);
-        CompletableFuture.runAsync(() -> {
-            try {
-                JournalMaster voucher = apiClient.importOpeningBalances(request);
-                Platform.runLater(() -> {
-                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Opening Balances Imported", "Success",
-                            "Recorded as Opening Balance voucher \"" + voucher.getJId() + "\".");
-                    resetForm();
-                });
-            } catch (Exception ex) {
-                Platform.runLater(() -> {
-                    importBtn.setDisable(false);
-                    UiUtils.showAlert(Alert.AlertType.ERROR, "Import Failed",
-                            "Failed to import opening balances", ex.getMessage());
-                });
-            }
+        AsyncUi.fetch(() -> apiClient.importOpeningBalances(request), voucher -> {
+            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Opening Balances Imported", "Success",
+                    "Recorded as Opening Balance voucher \"" + voucher.getJId() + "\".");
+            resetForm();
+        }, ex -> {
+            importBtn.setDisable(false);
+            UiUtils.showAlert(Alert.AlertType.ERROR, "Import Failed",
+                    "Failed to import opening balances", ex.getMessage());
         });
     }
 

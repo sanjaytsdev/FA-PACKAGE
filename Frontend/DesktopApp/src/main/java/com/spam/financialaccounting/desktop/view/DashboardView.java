@@ -1,17 +1,16 @@
 package com.spam.financialaccounting.desktop.view;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
+import com.spam.financialaccounting.desktop.config.UiConstants;
 import com.spam.financialaccounting.desktop.model.FAGroup;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
 import com.spam.financialaccounting.desktop.model.JournalMaster;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 
-import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class DashboardView extends VBox {
 
@@ -74,53 +73,47 @@ public class DashboardView extends VBox {
         return card;
     }
 
+    private record DashboardStats(int groups, int ledgers, int journals, BigDecimal tbBalance) {
+    }
+
     private void loadDashboardData() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<FAGroup> groups = apiClient.getGroups();
-                List<FASubGroup> ledgers = apiClient.getLedgerAccounts();
-                List<JournalMaster> journals = apiClient.getJournalMasters();
+        AsyncUi.fetch(() -> {
+            List<FAGroup> groups = apiClient.getGroups();
+            List<FASubGroup> ledgers = apiClient.getLedgerAccounts();
+            List<JournalMaster> journals = apiClient.getJournalMasters();
 
-                // Check the books balance: in double-entry, total debits should equal total credits.
-                // Each ledger has an opening balance and a side, so sum them up and see if it nets to zero.
-                BigDecimal totalBalance = BigDecimal.ZERO;
-                for (FASubGroup ledger : ledgers) {
-                    BigDecimal balance = ledger.getSOpbal() != null ? ledger.getSOpbal() : BigDecimal.ZERO;
+            // Check the books balance: in double-entry, total debits should equal total credits.
+            // Each ledger has an opening balance and a side, so sum them up and see if it nets to zero.
+            BigDecimal totalBalance = BigDecimal.ZERO;
+            for (FASubGroup ledger : ledgers) {
+                BigDecimal balance = ledger.getSOpbal() != null ? ledger.getSOpbal() : BigDecimal.ZERO;
 
-                    if ("CR".equalsIgnoreCase(ledger.getSDrCr())) {
-                        totalBalance = totalBalance.subtract(balance);
-                    } else {
-                        totalBalance = totalBalance.add(balance);
-                    }
+                if ("CR".equalsIgnoreCase(ledger.getSDrCr())) {
+                    totalBalance = totalBalance.subtract(balance);
+                } else {
+                    totalBalance = totalBalance.add(balance);
                 }
-
-                final int gCount = groups.size();
-                final int lCount = ledgers.size();
-                final int jCount = journals.size();
-                final BigDecimal tbVal = totalBalance;
-
-                Platform.runLater(() -> {
-                    totalGroupsVal.setText(String.valueOf(gCount));
-                    totalLedgersVal.setText(String.valueOf(lCount));
-                    totalJournalsVal.setText(String.valueOf(jCount));
-
-                    if (tbVal.compareTo(BigDecimal.ZERO) == 0) {
-                        tbStatusVal.setText("BALANCED (0.00)");
-                        tbStatusVal.setStyle("-fx-text-fill: #10b981;");
-                    } else {
-                        tbStatusVal.setText("MISMATCH (" + tbVal.toPlainString() + ")");
-                        tbStatusVal.setStyle("-fx-text-fill: #ef4444;");
-                    }
-                });
-            } catch (Exception ex) {
-                Platform.runLater(() -> {
-                    totalGroupsVal.setText("Error");
-                    totalLedgersVal.setText("Error");
-                    totalJournalsVal.setText("Error");
-                    tbStatusVal.setText("Unknown");
-                    tbStatusVal.setStyle("-fx-text-fill: #ef4444;");
-                });
             }
+
+            return new DashboardStats(groups.size(), ledgers.size(), journals.size(), totalBalance);
+        }, stats -> {
+            totalGroupsVal.setText(String.valueOf(stats.groups()));
+            totalLedgersVal.setText(String.valueOf(stats.ledgers()));
+            totalJournalsVal.setText(String.valueOf(stats.journals()));
+
+            if (stats.tbBalance().compareTo(BigDecimal.ZERO) == 0) {
+                tbStatusVal.setText("BALANCED (0.00)");
+                tbStatusVal.setStyle("-fx-text-fill: " + UiConstants.COLOR_SUCCESS + ";");
+            } else {
+                tbStatusVal.setText("MISMATCH (" + stats.tbBalance().toPlainString() + ")");
+                tbStatusVal.setStyle("-fx-text-fill: " + UiConstants.COLOR_DANGER + ";");
+            }
+        }, ex -> {
+            totalGroupsVal.setText("Error");
+            totalLedgersVal.setText("Error");
+            totalJournalsVal.setText("Error");
+            tbStatusVal.setText("Unknown");
+            tbStatusVal.setStyle("-fx-text-fill: " + UiConstants.COLOR_DANGER + ";");
         });
     }
 

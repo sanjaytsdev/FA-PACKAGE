@@ -4,6 +4,7 @@ import com.spam.financialaccounting.desktop.api.ApiClient;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
 import com.spam.financialaccounting.desktop.model.JournalDetail;
 import com.spam.financialaccounting.desktop.model.JournalMaster;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -153,27 +154,15 @@ public class JournalEntriesView extends HBox {
     }
 
     private void loadMasters() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<JournalMaster> masters = apiClient.getJournalMasters();
-                Platform.runLater(() -> masterTable.setItems(FXCollections.observableArrayList(masters)));
-            } catch (Exception ex) {
-                Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error",
-                        "Failed to load vouchers", ex.getMessage()));
-            }
-        });
+        AsyncUi.fetch(apiClient::getJournalMasters,
+                masters -> masterTable.setItems(FXCollections.observableArrayList(masters)),
+                "Fetch Error", "Failed to load vouchers");
     }
 
     private void loadDetails(String jId) {
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<JournalDetail> details = apiClient.getJournalDetailsByJournalId(jId);
-                Platform.runLater(() -> detailTable.setItems(FXCollections.observableArrayList(details)));
-            } catch (Exception ex) {
-                Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error",
-                        "Failed to load transaction lines", ex.getMessage()));
-            }
-        });
+        AsyncUi.fetch(() -> apiClient.getJournalDetailsByJournalId(jId),
+                details -> detailTable.setItems(FXCollections.observableArrayList(details)),
+                "Fetch Error", "Failed to load transaction lines");
     }
 
     private void deleteSelectedVoucher() {
@@ -186,23 +175,16 @@ public class JournalEntriesView extends HBox {
         confirm.setContentText("This will delete the voucher header and all its sub-ledger line entries. Proceed?");
         UiUtils.applyStylesheet(confirm.getDialogPane());
 
+        String jId = selectedMaster.getJId();
         confirm.showAndWait().ifPresent(btnType -> {
             if (btnType == ButtonType.OK) {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        // Server drops the header and all its lines in one atomic call.
-                        apiClient.deleteJournalVoucher(selectedMaster.getJId());
-                        Platform.runLater(() -> {
-                            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Voucher Deleted",
-                                    "Voucher and lines removed successfully.");
-                            detailTable.getItems().clear();
-                            loadMasters();
-                        });
-                    } catch (Exception ex) {
-                        Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Deletion Failed",
-                                "Failed to delete journal voucher", ex.getMessage()));
-                    }
-                });
+                // Server drops the header and all its lines in one atomic call.
+                AsyncUi.run(() -> apiClient.deleteJournalVoucher(jId), () -> {
+                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Voucher Deleted",
+                            "Voucher and lines removed successfully.");
+                    detailTable.getItems().clear();
+                    loadMasters();
+                }, "Deletion Failed", "Failed to delete journal voucher");
             }
         });
     }
@@ -217,21 +199,14 @@ public class JournalEntriesView extends HBox {
         confirm.setContentText("This posts a new balanced voucher with the opposite DR/CR of each line. Proceed?");
         UiUtils.applyStylesheet(confirm.getDialogPane());
 
+        String jId = selectedMaster.getJId();
         confirm.showAndWait().ifPresent(btnType -> {
             if (btnType == ButtonType.OK) {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        JournalMaster reversal = apiClient.reverseJournalVoucher(selectedMaster.getJId());
-                        Platform.runLater(() -> {
-                            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Voucher Reversed", "Success",
-                                    "Reversing voucher \"" + reversal.getJId() + "\" posted.");
-                            loadMasters();
-                        });
-                    } catch (Exception ex) {
-                        Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Reversal Failed",
-                                "Failed to reverse journal voucher", ex.getMessage()));
-                    }
-                });
+                AsyncUi.fetch(() -> apiClient.reverseJournalVoucher(jId), reversal -> {
+                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Voucher Reversed", "Success",
+                            "Reversing voucher \"" + reversal.getJId() + "\" posted.");
+                    loadMasters();
+                }, "Reversal Failed", "Failed to reverse journal voucher");
             }
         });
     }
@@ -390,21 +365,13 @@ public class JournalEntriesView extends HBox {
                 request.put("jNarr", narration);
                 request.put("lines", requestLines);
 
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        // One call posts the whole voucher; the server validates it.
-                        JournalMaster created = apiClient.postJournalVoucher(request);
-                        Platform.runLater(() -> {
-                            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Voucher Posted", "Success",
-                                    "Journal Voucher posted successfully.\nGenerated ID: " + created.getJId());
-                            dialog.close();
-                            loadMasters();
-                        });
-                    } catch (Exception ex) {
-                        Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Posting Error",
-                                "Failed to submit transaction", ex.getMessage()));
-                    }
-                });
+                // One call posts the whole voucher; the server validates it.
+                AsyncUi.fetch(() -> apiClient.postJournalVoucher(request), created -> {
+                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Voucher Posted", "Success",
+                            "Journal Voucher posted successfully.\nGenerated ID: " + created.getJId());
+                    dialog.close();
+                    loadMasters();
+                }, "Posting Error", "Failed to submit transaction");
             });
 
             HBox actionBox = new HBox(15, addLineBtn, saveVoucherBtn);

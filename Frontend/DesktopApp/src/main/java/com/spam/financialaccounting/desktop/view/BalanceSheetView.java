@@ -1,10 +1,10 @@
 package com.spam.financialaccounting.desktop.view;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
-import com.spam.financialaccounting.desktop.model.BalanceSheet;
+import com.spam.financialaccounting.desktop.config.UiConstants;
 import com.spam.financialaccounting.desktop.model.ReportLineItem;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -12,7 +12,6 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.concurrent.CompletableFuture;
 
 public class BalanceSheetView extends VBox {
 
@@ -101,38 +100,30 @@ public class BalanceSheetView extends VBox {
 
     private void load() {
         statusLabel.setText("Loading...");
-        statusLabel.setStyle("-fx-text-fill: #94a3b8; -fx-font-weight: bold;");
+        statusLabel.setStyle(UiConstants.STYLE_STATUS_MUTED);
         LocalDate d = asOfPicker.getValue();
         final String asOf = d != null ? d.toString() : null;
-        CompletableFuture.runAsync(() -> {
-            try {
-                BalanceSheet report = apiClient.getBalanceSheet(asOf);
-                Platform.runLater(() -> {
-                    assetsTable.setItems(FXCollections.observableArrayList(report.getAssets()));
-                    assetsTotal.setText("Total Assets: " + UiUtils.money(report.getTotalAssets()));
-                    liabilitiesTable.setItems(FXCollections.observableArrayList(report.getLiabilities()));
-                    liabilitiesTotal.setText("Total Liabilities: " + UiUtils.money(report.getTotalLiabilities()));
-                    equityTable.setItems(FXCollections.observableArrayList(report.getEquity()));
-                    equityTotal.setText("Total Equity: " + UiUtils.money(report.getTotalEquity()));
+        AsyncUi.fetch(() -> apiClient.getBalanceSheet(asOf), report -> {
+            assetsTable.setItems(FXCollections.observableArrayList(report.getAssets()));
+            assetsTotal.setText("Total Assets: " + UiUtils.money(report.getTotalAssets()));
+            liabilitiesTable.setItems(FXCollections.observableArrayList(report.getLiabilities()));
+            liabilitiesTotal.setText("Total Liabilities: " + UiUtils.money(report.getTotalLiabilities()));
+            equityTable.setItems(FXCollections.observableArrayList(report.getEquity()));
+            equityTotal.setText("Total Equity: " + UiUtils.money(report.getTotalEquity()));
 
-                    if (report.isBalanced()) {
-                        statusLabel.setText("● BALANCED   (Assets " + UiUtils.money(report.getTotalAssets())
-                                + " = Liabilities " + UiUtils.money(report.getTotalLiabilities())
-                                + " + Equity " + UiUtils.money(report.getTotalEquity()) + ")");
-                        statusLabel.setStyle("-fx-text-fill: #10b981; -fx-font-weight: bold;");
-                    } else {
-                        statusLabel.setText("● OUT OF BALANCE");
-                        statusLabel.setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
-                    }
-                });
-            } catch (Exception ex) {
-                Platform.runLater(() -> {
-                    statusLabel.setText("Failed to load balance sheet");
-                    statusLabel.setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
-                    UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error", "Failed to load balance sheet",
-                            ex.getMessage());
-                });
+            if (report.isBalanced()) {
+                statusLabel.setText("● BALANCED   (Assets " + UiUtils.money(report.getTotalAssets())
+                        + " = Liabilities " + UiUtils.money(report.getTotalLiabilities())
+                        + " + Equity " + UiUtils.money(report.getTotalEquity()) + ")");
+                statusLabel.setStyle(UiConstants.STYLE_STATUS_SUCCESS);
+            } else {
+                statusLabel.setText("● OUT OF BALANCE");
+                statusLabel.setStyle(UiConstants.STYLE_STATUS_DANGER);
             }
+        }, ex -> {
+            statusLabel.setText("Failed to load balance sheet");
+            statusLabel.setStyle(UiConstants.STYLE_STATUS_DANGER);
+            UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error", "Failed to load balance sheet", ex.getMessage());
         });
     }
 }

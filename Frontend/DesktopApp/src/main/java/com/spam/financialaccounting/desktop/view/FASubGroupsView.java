@@ -3,17 +3,15 @@ package com.spam.financialaccounting.desktop.view;
 import com.spam.financialaccounting.desktop.api.ApiClient;
 import com.spam.financialaccounting.desktop.model.FAGroup;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.control.*;
-import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class FASubGroupsView extends HBox {
 
@@ -178,20 +176,16 @@ public class FASubGroupsView extends HBox {
         loadInitialData();
     }
 
+    private record InitialData(List<FAGroup> groups, List<FASubGroup> subGroups) {
+    }
+
     private void loadInitialData() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<FAGroup> groups = apiClient.getGroups();
-                List<FASubGroup> subGroups = apiClient.getLedgerAccounts();
-                Platform.runLater(() -> {
-                    parentSelect.setItems(FXCollections.observableArrayList(groups));
-                    table.setItems(FXCollections.observableArrayList(subGroups));
-                });
-            } catch (Exception ex) {
-                Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error",
-                        "Failed to retrieve initial data", ex.getMessage()));
-            }
-        });
+        AsyncUi.fetch(() -> new InitialData(apiClient.getGroups(), apiClient.getLedgerAccounts()),
+                data -> {
+                    parentSelect.setItems(FXCollections.observableArrayList(data.groups()));
+                    table.setItems(FXCollections.observableArrayList(data.subGroups()));
+                },
+                "Fetch Error", "Failed to retrieve initial data");
     }
 
     private void saveSubGroup() {
@@ -241,27 +235,21 @@ public class FASubGroupsView extends HBox {
         }
 
         FASubGroup sg = new FASubGroup(code, desc, parent.getAccountCode(), type, bal, drCr, status);
+        boolean isNew = selectedSubGroup == null;
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                if (selectedSubGroup == null) {
-                    apiClient.createLedgerAccount(sg);
-                    Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Ledger Created",
-                            "Ledger account created successfully."));
-                } else {
-                    apiClient.updateLedgerAccount(code, sg);
-                    Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Ledger Updated",
-                            "Ledger account details updated successfully."));
-                }
-                Platform.runLater(() -> {
-                    clearForm();
-                    loadInitialData();
-                });
-            } catch (Exception ex) {
-                Platform.runLater(
-                        () -> UiUtils.showAlert(Alert.AlertType.ERROR, "Save Failed", "API Error", ex.getMessage()));
+        AsyncUi.run(() -> {
+            if (isNew) {
+                apiClient.createLedgerAccount(sg);
+            } else {
+                apiClient.updateLedgerAccount(code, sg);
             }
-        });
+        }, () -> {
+            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success",
+                    isNew ? "Ledger Created" : "Ledger Updated",
+                    isNew ? "Ledger account created successfully." : "Ledger account details updated successfully.");
+            clearForm();
+            loadInitialData();
+        }, "Save Failed", "API Error");
     }
 
     private void deleteSubGroup() {
@@ -275,22 +263,15 @@ public class FASubGroupsView extends HBox {
 
         UiUtils.applyStylesheet(confirm.getDialogPane());
 
+        String code = selectedSubGroup.getSCode();
         confirm.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        apiClient.deleteLedgerAccount(selectedSubGroup.getSCode());
-                        Platform.runLater(() -> {
-                            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Deleted",
-                                    "Ledger Account successfully removed.");
-                            clearForm();
-                            loadInitialData();
-                        });
-                    } catch (Exception ex) {
-                        Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Delete Failed",
-                                "API Core Error", ex.getMessage()));
-                    }
-                });
+                AsyncUi.run(() -> apiClient.deleteLedgerAccount(code), () -> {
+                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Deleted",
+                            "Ledger Account successfully removed.");
+                    clearForm();
+                    loadInitialData();
+                }, "Delete Failed", "API Core Error");
             }
         });
     }

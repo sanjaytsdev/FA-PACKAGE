@@ -2,8 +2,8 @@ package com.spam.financialaccounting.desktop.view;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
 import com.spam.financialaccounting.desktop.model.PeriodLock;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -13,7 +13,6 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class PeriodLocksView extends VBox {
 
@@ -85,15 +84,9 @@ public class PeriodLocksView extends VBox {
     }
 
     private void load() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<PeriodLock> locks = apiClient.getPeriodLocks();
-                Platform.runLater(() -> table.setItems(FXCollections.observableArrayList(locks)));
-            } catch (Exception ex) {
-                Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Failure",
-                        "Failed to load period locks", ex.getMessage()));
-            }
-        });
+        AsyncUi.fetch(apiClient::getPeriodLocks,
+                locks -> table.setItems(FXCollections.observableArrayList(locks)),
+                "Fetch Failure", "Failed to load period locks");
     }
 
     private void createLock() {
@@ -114,21 +107,13 @@ public class PeriodLocksView extends VBox {
         request.put("periodStart", start.toString());
         request.put("periodEnd", end.toString());
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                apiClient.createPeriodLock(request);
-                Platform.runLater(() -> {
-                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Period Locked", "Success",
-                            "Period " + start + " → " + end + " is now closed.");
-                    startPicker.setValue(null);
-                    endPicker.setValue(null);
-                    load();
-                });
-            } catch (Exception ex) {
-                Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Lock Failed",
-                        "Failed to create period lock", ex.getMessage()));
-            }
-        });
+        AsyncUi.run(() -> apiClient.createPeriodLock(request), () -> {
+            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Period Locked", "Success",
+                    "Period " + start + " → " + end + " is now closed.");
+            startPicker.setValue(null);
+            endPicker.setValue(null);
+            load();
+        }, "Lock Failed", "Failed to create period lock");
     }
 
     private void deleteLock(PeriodLock lock) {
@@ -140,19 +125,11 @@ public class PeriodLocksView extends VBox {
 
         confirm.showAndWait().ifPresent(btnType -> {
             if (btnType == ButtonType.OK) {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        apiClient.deletePeriodLock(lock.getId());
-                        Platform.runLater(() -> {
-                            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Period Unlocked", "Success",
-                                    "Period " + lock.getPeriodStart() + " → " + lock.getPeriodEnd() + " reopened.");
-                            load();
-                        });
-                    } catch (Exception ex) {
-                        Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Unlock Failed",
-                                "Failed to delete period lock", ex.getMessage()));
-                    }
-                });
+                AsyncUi.run(() -> apiClient.deletePeriodLock(lock.getId()), () -> {
+                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Period Unlocked", "Success",
+                            "Period " + lock.getPeriodStart() + " → " + lock.getPeriodEnd() + " reopened.");
+                    load();
+                }, "Unlock Failed", "Failed to delete period lock");
             }
         });
     }
