@@ -1,10 +1,12 @@
 package com.spam.financialaccounting.desktop.view;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
+import com.spam.financialaccounting.desktop.config.UiConstants;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
 import com.spam.financialaccounting.desktop.model.JournalDetail;
 import com.spam.financialaccounting.desktop.model.JournalMaster;
 import com.spam.financialaccounting.desktop.ui.AsyncUi;
+import com.spam.financialaccounting.desktop.ui.LedgerLineEditor;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -239,11 +241,11 @@ public class JournalEntriesView extends HBox {
         headerGrid.add(narrInput, 1, 1, 3, 1);
 
         // Holds the entry lines
-        VBox linesContainer = new VBox(10);
+        LedgerLineEditor editor = new LedgerLineEditor(LedgerLineEditor.voucherStyle());
         Label linesTitle = new Label("Voucher Entry Lines (Double-Entry Ledger Grid)");
         linesTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
-        ScrollPane scroll = new ScrollPane(linesContainer);
+        ScrollPane scroll = new ScrollPane(editor);
         scroll.setFitToWidth(true);
         scroll.setPrefHeight(250);
         scroll.setStyle("-fx-background-color: transparent; -fx-background: #1e293b;");
@@ -255,19 +257,17 @@ public class JournalEntriesView extends HBox {
         totalSummaryBox.getStyleClass().add("card");
 
         Label totalDrLabel = new Label("Total Debit: 0.00");
-        totalDrLabel.setStyle("-fx-text-fill: #10b981; -fx-font-weight: bold;");
+        totalDrLabel.setStyle(UiConstants.STYLE_STATUS_SUCCESS);
         Label totalCrLabel = new Label("Total Credit: 0.00");
-        totalCrLabel.setStyle("-fx-text-fill: #10b981; -fx-font-weight: bold;");
+        totalCrLabel.setStyle(UiConstants.STYLE_STATUS_SUCCESS);
         Label diffLabel = new Label("Net Difference: 0.00 (Balanced)");
-        diffLabel.setStyle("-fx-text-fill: #10b981; -fx-font-weight: bold;");
+        diffLabel.setStyle(UiConstants.STYLE_STATUS_SUCCESS);
 
         totalSummaryBox.getChildren().addAll(totalDrLabel, totalCrLabel, diffLabel);
 
         Button saveVoucherBtn = new Button("Validation & Post Voucher");
         saveVoucherBtn.getStyleClass().add("btn-success");
         saveVoucherBtn.setDisable(true);
-
-        List<VoucherLineRow> lineRows = new ArrayList<>();
 
         // Load the accounts that fill the combo-boxes
         CompletableFuture.supplyAsync(() -> {
@@ -279,46 +279,30 @@ public class JournalEntriesView extends HBox {
         }).thenAccept(accounts -> Platform.runLater(() -> {
             // recomputes the totals whenever a line changes
             Runnable recalculator = () -> {
-                BigDecimal drSum = BigDecimal.ZERO;
-                BigDecimal crSum = BigDecimal.ZERO;
+                LedgerLineEditor.Totals totals = editor.totals();
+                totalDrLabel.setText("Total Debit: " + totals.debit().toPlainString());
+                totalCrLabel.setText("Total Credit: " + totals.credit().toPlainString());
 
-                for (VoucherLineRow row : lineRows) {
-                    BigDecimal rowAmt = row.getAmount();
-                    String rowDrCr = row.getDrCr();
-                    if (rowAmt != null) {
-                        if ("DR".equals(rowDrCr)) {
-                            drSum = drSum.add(rowAmt);
-                        } else if ("CR".equals(rowDrCr)) {
-                            crSum = crSum.add(rowAmt);
-                        }
-                    }
-                }
-
-                totalDrLabel.setText("Total Debit: " + drSum.toPlainString());
-                totalCrLabel.setText("Total Credit: " + crSum.toPlainString());
-                BigDecimal diff = drSum.subtract(crSum).abs();
-                diffLabel.setText("Difference: " + diff.toPlainString());
-
-                boolean isBalanced = drSum.compareTo(BigDecimal.ZERO) > 0 && drSum.compareTo(crSum) == 0;
-
-                if (isBalanced) {
+                if (totals.isBalanced()) {
                     diffLabel.setText("Voucher Balanced!");
-                    diffLabel.setStyle("-fx-text-fill: #10b981; -fx-font-weight: bold;");
+                    diffLabel.setStyle(UiConstants.STYLE_STATUS_SUCCESS);
                     saveVoucherBtn.setDisable(false);
                 } else {
-                    diffLabel.setText("Difference: " + diff.toPlainString() + " (Unbalanced)");
-                    diffLabel.setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
+                    diffLabel.setText("Difference: " + totals.difference().toPlainString() + " (Unbalanced)");
+                    diffLabel.setStyle(UiConstants.STYLE_STATUS_DANGER);
                     saveVoucherBtn.setDisable(true);
                 }
             };
+            editor.setOnChange(recalculator);
+            editor.setAccounts(accounts);
 
             // Start with two lines, since a voucher needs at least one debit and one credit
-            addLineRow(linesContainer, accounts, lineRows, recalculator);
-            addLineRow(linesContainer, accounts, lineRows, recalculator);
+            editor.addLine();
+            editor.addLine();
 
             Button addLineBtn = new Button("➕ Add Debit/Credit Line");
             addLineBtn.getStyleClass().add("btn-secondary");
-            addLineBtn.setOnAction(evt -> addLineRow(linesContainer, accounts, lineRows, recalculator));
+            addLineBtn.setOnAction(evt -> editor.addLine());
 
             saveVoucherBtn.setOnAction(evt -> {
                 String narration = narrInput.getText().trim();
@@ -337,13 +321,13 @@ public class JournalEntriesView extends HBox {
                 LocalDateTime voucherTime = datePicker.getValue().atStartOfDay();
 
                 // Make sure every line is filled in
-                for (VoucherLineRow row : lineRows) {
-                    if (row.getAccountCode() == null) {
+                List<LedgerLineEditor.LineData> lines = editor.lines();
+                for (LedgerLineEditor.LineData line : lines) {
+                    if (line.accountCode() == null) {
                         UiUtils.showAlert(Alert.AlertType.WARNING, "Validation Error", "Incomplete Line Item", "Please select a valid ledger account for all entry lines.");
                         return;
                     }
-                    BigDecimal amt = row.getAmount();
-                    if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
+                    if (line.amount() == null || line.amount().compareTo(BigDecimal.ZERO) <= 0) {
                         UiUtils.showAlert(Alert.AlertType.WARNING, "Validation Error", "Incomplete Line Item", "Please enter a valid positive decimal amount for all entry lines.");
                         return;
                     }
@@ -352,12 +336,12 @@ public class JournalEntriesView extends HBox {
                 // Build the request. The backend re-checks the debit/credit balance,
                 // works out the total, and generates the ID.
                 List<Map<String, Object>> requestLines = new ArrayList<>();
-                for (VoucherLineRow row : lineRows) {
-                    Map<String, Object> line = new HashMap<>();
-                    line.put("jCode", row.getAccountCode());
-                    line.put("jDrCr", row.getDrCr());
-                    line.put("jAmount", row.getAmount());
-                    requestLines.add(line);
+                for (LedgerLineEditor.LineData line : lines) {
+                    Map<String, Object> lineMap = new HashMap<>();
+                    lineMap.put("jCode", line.accountCode());
+                    lineMap.put("jDrCr", line.drCr());
+                    lineMap.put("jAmount", line.amount());
+                    requestLines.add(lineMap);
                 }
                 Map<String, Object> request = new HashMap<>();
                 request.put("jDoc", "JV");
@@ -383,78 +367,6 @@ public class JournalEntriesView extends HBox {
         UiUtils.applyStylesheet(scene);
         dialog.setScene(scene);
         dialog.showAndWait();
-    }
-
-    private void addLineRow(VBox container, List<FASubGroup> accounts, List<VoucherLineRow> rows, Runnable onRecalculate) {
-        HBox row = new HBox(10);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(5,0,5,0));
-
-        ComboBox<FASubGroup> accSelect = new ComboBox<>(FXCollections.observableArrayList(accounts));
-        accSelect.setPromptText("Select Ledger Account");
-        accSelect.setPrefWidth(220);
-
-        ComboBox<String> typeSelect = new ComboBox<>(FXCollections.observableArrayList("DR", "CR"));
-        typeSelect.setValue("DR");
-        typeSelect.setPrefWidth(80);
-
-        TextField amountInput = new TextField();
-        amountInput.setPromptText("Amount");
-        amountInput.setPrefWidth(120);
-
-        Button removeBtn = new Button("X");
-        removeBtn.getStyleClass().add("btn-danger");
-
-        VoucherLineRow rowData = new VoucherLineRow(accSelect,typeSelect,amountInput);
-        rows.add(rowData);
-
-        removeBtn.setOnAction(e-> {
-            container.getChildren().remove(row);
-            rows.remove(rowData);
-            onRecalculate.run();
-        });
-
-       // Default DR/CR to the account's normal side, then recalculate
-accSelect.setOnAction(e -> {
-    FASubGroup chosen = accSelect.getValue();
-    if (chosen != null) typeSelect.setValue(chosen.getSDrCr());
-    onRecalculate.run();
-});
-typeSelect.setOnAction(e->onRecalculate.run());
-amountInput.textProperty().addListener((obs,o,n)->onRecalculate.run());
-
-row.getChildren().addAll(accSelect,typeSelect,amountInput,removeBtn);
-container.getChildren().add(row);
-    }
-
-    private static class VoucherLineRow {
-        private final ComboBox<FASubGroup> accountSelector;
-        private final ComboBox<String> drcrSelector;
-        private final TextField amountField;
-
-        public VoucherLineRow(ComboBox<FASubGroup> accountSelector, ComboBox<String> drcrSelector,
-                TextField amountField) {
-            this.accountSelector = accountSelector;
-            this.drcrSelector = drcrSelector;
-            this.amountField = amountField;
-        }
-
-        public String getAccountCode() {
-            FASubGroup acc = accountSelector.getValue();
-            return acc != null ? acc.getSCode() : null;
-        }
-
-        public String getDrCr() {
-            return drcrSelector.getValue();
-        }
-
-        public BigDecimal getAmount() {
-            try {
-                return new BigDecimal(amountField.getText().trim());
-            } catch (Exception e) {
-                return null;
-            }
-        }
     }
 
 }
