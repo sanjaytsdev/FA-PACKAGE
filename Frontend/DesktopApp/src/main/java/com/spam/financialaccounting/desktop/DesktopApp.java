@@ -17,6 +17,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+/**
+ * JavaFX application shell: builds the sidebar/top-bar chrome and swaps the center
+ * content pane between the feature views on navigation. Owns the single shared
+ * {@link ApiClient} that every view receives.
+ */
 public class DesktopApp extends Application {
 
     private BorderPane rootLayout;

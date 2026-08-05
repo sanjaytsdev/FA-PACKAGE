@@ -25,6 +25,12 @@ import com.spam.financialaccounting.desktop.model.PeriodLock;
 import com.spam.financialaccounting.desktop.model.ProfitAndLoss;
 import com.spam.financialaccounting.desktop.model.TrialBalance;
 
+/**
+ * REST gateway to the FA-PACKAGE backend. Wraps a {@link HttpClient} and Jackson
+ * mapper, exposing one method per endpoint. Blocking calls throw on transport or
+ * HTTP errors (see {@link #handleErrorResponse}); callers run them off the FX
+ * thread via {@code ui.AsyncUi}.
+ */
 public class ApiClient {
     private static final String BASE_URL = AppConfig.getBaseUrl();
 
