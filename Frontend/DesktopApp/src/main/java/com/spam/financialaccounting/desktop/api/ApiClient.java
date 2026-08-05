@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.spam.financialaccounting.desktop.config.AppConfig;
 import com.spam.financialaccounting.desktop.model.BalanceSheet;
 import com.spam.financialaccounting.desktop.model.FAGroup;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
@@ -25,31 +26,8 @@ import com.spam.financialaccounting.desktop.model.ProfitAndLoss;
 import com.spam.financialaccounting.desktop.model.TrialBalance;
 
 public class ApiClient {
-    private static final String BASE_URL = loadBaseUrl();
+    private static final String BASE_URL = AppConfig.getBaseUrl();
 
-    private static String loadBaseUrl() {
-        java.util.Properties props = new java.util.Properties();
-        java.io.File configFile = new java.io.File("config.properties");
-        if (configFile.exists()) {
-            try (java.io.FileInputStream in = new java.io.FileInputStream(configFile)) {
-                props.load(in);
-                String url = props.getProperty("api.base.url");
-                if (url != null && !url.trim().isEmpty()) {
-                    return url.trim();
-                }
-            } catch (Exception ex) {
-                System.err.println("Error loading config.properties: " + ex.getMessage());
-            }
-        } else {
-            try (java.io.FileOutputStream out = new java.io.FileOutputStream(configFile)) {
-                props.setProperty("api.base.url", "http://localhost:8080/api/v1");
-                props.store(out, "FA-PACKAGE Desktop Client Settings");
-            } catch (Exception ex) {
-                System.err.println("Error creating default config.properties: " + ex.getMessage());
-            }
-        }
-        return "http://localhost:8080/api/v1";
-    }
     private final HttpClient client;
     private final ObjectMapper mapper;
 
