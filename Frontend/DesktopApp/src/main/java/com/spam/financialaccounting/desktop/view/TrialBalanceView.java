@@ -1,18 +1,16 @@
 package com.spam.financialaccounting.desktop.view;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
-import com.spam.financialaccounting.desktop.model.TrialBalance;
+import com.spam.financialaccounting.desktop.config.UiConstants;
 import com.spam.financialaccounting.desktop.model.TrialBalanceRow;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import java.time.LocalDate;
-import java.util.concurrent.CompletableFuture;
 
 public class TrialBalanceView extends VBox {
 
@@ -75,32 +73,24 @@ public class TrialBalanceView extends VBox {
 
     private void load() {
         statusLabel.setText("Loading...");
-        statusLabel.setStyle("-fx-text-fill: #94a3b8; -fx-font-weight: bold;");
+        statusLabel.setStyle(UiConstants.STYLE_STATUS_MUTED);
         LocalDate d = asOfPicker.getValue();
         final String asOf = d != null ? d.toString() : null;
-        CompletableFuture.runAsync(() -> {
-            try {
-                TrialBalance report = apiClient.getTrialBalance(asOf);
-                Platform.runLater(() -> {
-                    table.setItems(FXCollections.observableArrayList(report.getRows()));
-                    if (report.isBalanced()) {
-                        statusLabel.setText("● IN BALANCE");
-                        statusLabel.setStyle("-fx-text-fill: #10b981; -fx-font-weight: bold;");
-                    } else {
-                        statusLabel.setText("● OUT OF BALANCE");
-                        statusLabel.setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
-                    }
-                    totalsLabel.setText("Total Debit: " + UiUtils.money(report.getTotalDebit())
-                            + "      Total Credit: " + UiUtils.money(report.getTotalCredit()));
-                });
-            } catch (Exception ex) {
-                Platform.runLater(() -> {
-                    statusLabel.setText("Failed to load trial balance");
-                    statusLabel.setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
-                    UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error", "Failed to load trial balance",
-                            ex.getMessage());
-                });
+        AsyncUi.fetch(() -> apiClient.getTrialBalance(asOf), report -> {
+            table.setItems(FXCollections.observableArrayList(report.getRows()));
+            if (report.isBalanced()) {
+                statusLabel.setText("● IN BALANCE");
+                statusLabel.setStyle(UiConstants.STYLE_STATUS_SUCCESS);
+            } else {
+                statusLabel.setText("● OUT OF BALANCE");
+                statusLabel.setStyle(UiConstants.STYLE_STATUS_DANGER);
             }
+            totalsLabel.setText("Total Debit: " + UiUtils.money(report.getTotalDebit())
+                    + "      Total Credit: " + UiUtils.money(report.getTotalCredit()));
+        }, ex -> {
+            statusLabel.setText("Failed to load trial balance");
+            statusLabel.setStyle(UiConstants.STYLE_STATUS_DANGER);
+            UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error", "Failed to load trial balance", ex.getMessage());
         });
     }
 }

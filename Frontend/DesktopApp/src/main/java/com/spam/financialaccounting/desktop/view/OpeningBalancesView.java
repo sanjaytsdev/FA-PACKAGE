@@ -1,11 +1,12 @@
 package com.spam.financialaccounting.desktop.view;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
+import com.spam.financialaccounting.desktop.config.UiConstants;
 import com.spam.financialaccounting.desktop.model.FASubGroup;
-import com.spam.financialaccounting.desktop.model.JournalMaster;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
+import com.spam.financialaccounting.desktop.ui.LedgerLineEditor;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -23,13 +24,11 @@ public class OpeningBalancesView extends VBox {
     private final ApiClient apiClient;
     private final DatePicker datePicker;
     private final TextField narrInput;
-    private final VBox linesContainer;
+    private final LedgerLineEditor lineEditor = new LedgerLineEditor(LedgerLineEditor.openingStyle());
     private final Label totalDrLabel;
     private final Label totalCrLabel;
     private final Label diffLabel;
     private final Button importBtn;
-    private final List<LineRow> lineRows = new ArrayList<>();
-    private List<FASubGroup> accounts = new ArrayList<>();
 
     public OpeningBalancesView(ApiClient apiClient) {
         this.apiClient = apiClient;
@@ -53,14 +52,14 @@ public class OpeningBalancesView extends VBox {
                 new VBox(5, new Label("Narration:"), narrInput));
         HBox.setHgrow(headerFields.getChildren().get(1), Priority.ALWAYS);
 
-        linesContainer = new VBox(10);
-        ScrollPane scroll = new ScrollPane(linesContainer);
+        lineEditor.setOnChange(this::recalculate);
+        ScrollPane scroll = new ScrollPane(lineEditor);
         scroll.setFitToWidth(true);
         scroll.setPrefHeight(260);
 
         Button addLineBtn = new Button("➕ Add Line");
         addLineBtn.getStyleClass().add("btn-secondary");
-        addLineBtn.setOnAction(e -> addLineRow());
+        addLineBtn.setOnAction(e -> lineEditor.addLine());
 
         totalDrLabel = new Label("Total Debit: 0.00");
         totalDrLabel.setStyle("-fx-text-fill: #6366f1; -fx-font-weight: bold;");
@@ -98,82 +97,36 @@ public class OpeningBalancesView extends VBox {
                 return new ArrayList<FASubGroup>();
             }
         }).thenAccept(list -> Platform.runLater(() -> {
-            this.accounts = list;
-            addLineRow();
-            addLineRow();
+            lineEditor.setAccounts(list);
+            lineEditor.addLine();
+            lineEditor.addLine();
         }));
     }
 
     private void recalculate() {
-        BigDecimal drSum = BigDecimal.ZERO;
-        BigDecimal crSum = BigDecimal.ZERO;
-        for (LineRow row : lineRows) {
-            BigDecimal amt = row.getAmount();
-            if (amt != null) {
-                if ("DR".equals(row.getDrCr())) drSum = drSum.add(amt);
-                else if ("CR".equals(row.getDrCr())) crSum = crSum.add(amt);
-            }
-        }
-        totalDrLabel.setText("Total Debit: " + UiUtils.money(drSum));
-        totalCrLabel.setText("Total Credit: " + UiUtils.money(crSum));
-        BigDecimal diff = drSum.subtract(crSum).abs();
-        boolean balanced = drSum.compareTo(BigDecimal.ZERO) > 0 && drSum.compareTo(crSum) == 0;
+        LedgerLineEditor.Totals totals = lineEditor.totals();
+        totalDrLabel.setText("Total Debit: " + UiUtils.money(totals.debit()));
+        totalCrLabel.setText("Total Credit: " + UiUtils.money(totals.credit()));
+        boolean balanced = totals.isBalanced();
         if (balanced) {
             diffLabel.setText("Balanced!");
-            diffLabel.setStyle("-fx-text-fill: #10b981; -fx-font-weight: bold;");
+            diffLabel.setStyle(UiConstants.STYLE_STATUS_SUCCESS);
         } else {
-            diffLabel.setText("Difference: " + UiUtils.money(diff));
-            diffLabel.setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;");
+            diffLabel.setText("Difference: " + UiUtils.money(totals.difference()));
+            diffLabel.setStyle(UiConstants.STYLE_STATUS_DANGER);
         }
         importBtn.setDisable(!balanced);
     }
 
-    private void addLineRow() {
-        HBox row = new HBox(10);
-        row.setAlignment(Pos.CENTER_LEFT);
-
-        ComboBox<FASubGroup> accSelect = new ComboBox<>(FXCollections.observableArrayList(accounts));
-        accSelect.setPromptText("Select Ledger Account");
-        accSelect.setPrefWidth(260);
-        ComboBox<String> typeSelect = new ComboBox<>(FXCollections.observableArrayList("DR", "CR"));
-        typeSelect.setValue("DR");
-        typeSelect.setPrefWidth(80);
-        TextField amountInput = new TextField();
-        amountInput.setPromptText("Amount");
-        amountInput.setPrefWidth(140);
-        Button removeBtn = new Button("X");
-        removeBtn.getStyleClass().add("btn-danger");
-
-        LineRow rowData = new LineRow(accSelect, typeSelect, amountInput);
-        lineRows.add(rowData);
-
-        removeBtn.setOnAction(e -> {
-            if (lineRows.size() <= 2) return;
-            linesContainer.getChildren().remove(row);
-            lineRows.remove(rowData);
-            recalculate();
-        });
-        accSelect.setOnAction(e -> {
-            FASubGroup chosen = accSelect.getValue();
-            if (chosen != null) typeSelect.setValue(chosen.getSDrCr());
-            recalculate();
-        });
-        typeSelect.setOnAction(e -> recalculate());
-        amountInput.textProperty().addListener((obs, o, n) -> recalculate());
-
-        row.getChildren().addAll(accSelect, typeSelect, amountInput, removeBtn);
-        linesContainer.getChildren().add(row);
-    }
-
     private void doImport() {
-        for (LineRow row : lineRows) {
-            if (row.getAccountCode() == null) {
+        List<LedgerLineEditor.LineData> editorLines = lineEditor.lines();
+        for (LedgerLineEditor.LineData line : editorLines) {
+            if (line.accountCode() == null) {
                 UiUtils.showAlert(Alert.AlertType.WARNING, "Missing Account", "Incomplete Line",
                         "Select a ledger account for every line item.");
                 return;
             }
-            BigDecimal amt = row.getAmount();
-            if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
+            if (line.amount() == null || line.amount().compareTo(BigDecimal.ZERO) <= 0) {
                 UiUtils.showAlert(Alert.AlertType.WARNING, "Invalid Amount", "Incomplete Line",
                         "Enter a positive amount for every line item.");
                 return;
@@ -181,12 +134,12 @@ public class OpeningBalancesView extends VBox {
         }
 
         List<Map<String, Object>> lines = new ArrayList<>();
-        for (LineRow row : lineRows) {
-            Map<String, Object> line = new HashMap<>();
-            line.put("accountCode", row.getAccountCode());
-            line.put("drCr", row.getDrCr());
-            line.put("amount", row.getAmount());
-            lines.add(line);
+        for (LedgerLineEditor.LineData line : editorLines) {
+            Map<String, Object> lineMap = new HashMap<>();
+            lineMap.put("accountCode", line.accountCode());
+            lineMap.put("drCr", line.drCr());
+            lineMap.put("amount", line.amount());
+            lines.add(lineMap);
         }
 
         Map<String, Object> request = new HashMap<>();
@@ -197,60 +150,23 @@ public class OpeningBalancesView extends VBox {
         request.put("lines", lines);
 
         importBtn.setDisable(true);
-        CompletableFuture.runAsync(() -> {
-            try {
-                JournalMaster voucher = apiClient.importOpeningBalances(request);
-                Platform.runLater(() -> {
-                    UiUtils.showAlert(Alert.AlertType.INFORMATION, "Opening Balances Imported", "Success",
-                            "Recorded as Opening Balance voucher \"" + voucher.getJId() + "\".");
-                    resetForm();
-                });
-            } catch (Exception ex) {
-                Platform.runLater(() -> {
-                    importBtn.setDisable(false);
-                    UiUtils.showAlert(Alert.AlertType.ERROR, "Import Failed",
-                            "Failed to import opening balances", ex.getMessage());
-                });
-            }
+        AsyncUi.fetch(() -> apiClient.importOpeningBalances(request), voucher -> {
+            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Opening Balances Imported", "Success",
+                    "Recorded as Opening Balance voucher \"" + voucher.getJId() + "\".");
+            resetForm();
+        }, ex -> {
+            importBtn.setDisable(false);
+            UiUtils.showAlert(Alert.AlertType.ERROR, "Import Failed",
+                    "Failed to import opening balances", ex.getMessage());
         });
     }
 
     private void resetForm() {
         datePicker.setValue(LocalDate.now());
         narrInput.clear();
-        linesContainer.getChildren().clear();
-        lineRows.clear();
-        addLineRow();
-        addLineRow();
+        lineEditor.clearLines();
+        lineEditor.addLine();
+        lineEditor.addLine();
         recalculate();
-    }
-
-    private static class LineRow {
-        private final ComboBox<FASubGroup> accountSelector;
-        private final ComboBox<String> drcrSelector;
-        private final TextField amountField;
-
-        LineRow(ComboBox<FASubGroup> accountSelector, ComboBox<String> drcrSelector, TextField amountField) {
-            this.accountSelector = accountSelector;
-            this.drcrSelector = drcrSelector;
-            this.amountField = amountField;
-        }
-
-        String getAccountCode() {
-            FASubGroup acc = accountSelector.getValue();
-            return acc != null ? acc.getSCode() : null;
-        }
-
-        String getDrCr() {
-            return drcrSelector.getValue();
-        }
-
-        BigDecimal getAmount() {
-            try {
-                return new BigDecimal(amountField.getText().trim());
-            } catch (Exception e) {
-                return null;
-            }
-        }
     }
 }

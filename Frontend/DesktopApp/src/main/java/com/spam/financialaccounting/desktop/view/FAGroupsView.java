@@ -2,16 +2,13 @@ package com.spam.financialaccounting.desktop.view;
 
 import com.spam.financialaccounting.desktop.api.ApiClient;
 import com.spam.financialaccounting.desktop.model.FAGroup;
+import com.spam.financialaccounting.desktop.ui.AsyncUi;
 import com.spam.financialaccounting.desktop.ui.UiUtils;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class FAGroupsView extends HBox {
 
@@ -158,15 +155,9 @@ public class FAGroupsView extends HBox {
     }
 
     private void loadGroups() {
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<FAGroup> groups = apiClient.getGroups();
-                Platform.runLater(() -> table.setItems(FXCollections.observableArrayList(groups)));
-            } catch (Exception ex) {
-                Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Fetch Error", "Failed to load Groups",
-                        ex.getMessage()));
-            }
-        });
+        AsyncUi.fetch(apiClient::getGroups,
+                groups -> table.setItems(FXCollections.observableArrayList(groups)),
+                "Fetch Error", "Failed to load Groups");
     }
 
     private void saveGroup() {
@@ -199,25 +190,22 @@ public class FAGroupsView extends HBox {
             return;
         }
 
-        FAGroup group = new FAGroup(code,desc,type,bal);
+        FAGroup group = new FAGroup(code, desc, type, bal);
+        boolean isNew = selectedGroup == null;
 
-        CompletableFuture.runAsync(()-> {
-            try {
-                if(selectedGroup==null) {
-                    apiClient.createGroup(group);
-                    Platform.runLater(()->UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Group Created", "Account Group was successfully added."));
-                } else {
-                    apiClient.updateGroup(code, group);
-                    Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "Group Updated", "Account Group details were updated."));
-                }
-                Platform.runLater(()-> {
-                    clearForm();
-                    loadGroups();
-                });
-            } catch(Exception ex) {
-                  Platform.runLater(() -> UiUtils.showAlert(Alert.AlertType.ERROR, "Save Failed", "API Submission Error", ex.getMessage()));
+        AsyncUi.run(() -> {
+            if (isNew) {
+                apiClient.createGroup(group);
+            } else {
+                apiClient.updateGroup(code, group);
             }
-        });
+        }, () -> {
+            UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success",
+                    isNew ? "Group Created" : "Group Updated",
+                    isNew ? "Account Group was successfully added." : "Account Group details were updated.");
+            clearForm();
+            loadGroups();
+        }, "Save Failed", "API Submission Error");
     }
 
     private void clearForm() {
